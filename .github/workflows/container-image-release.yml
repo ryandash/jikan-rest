@@ -1,140 +1,34 @@
-name: Container Image Release
-concurrency:
-  group: ${{ github.ref }}
-  cancel-in-progress: true
-permissions:
-  packages: write
-  contents: read
+name: Manual Docker Image Build
+
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Image tag'
+        description: 'Docker image tag'
         required: true
-        default: 'v4.0.0-nightly-<put_date_here>'
+        default: 'latest'
+
+permissions:
+  contents: read
+  packages: write
 
 env:
-  REGISTRY_IMAGE: ghcr.io/jikan-me/jikan-rest
+  REGISTRY_IMAGE: ghcr.io/ryandash/jikan-rest
 
 jobs:
-  build-app-image:
+  docker:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-    name: Build App container image
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up qemu
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
-      - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Read metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY_IMAGE }}
-          labels: |
-            org.opencontainers.image.title=Jikan REST API
-            org.opencontainers.image.description=REST API for Jikan
-            org.opencontainers.image.url=https://jikan.moe
-            org.opencontainers.image.source=https://github.com/jikan-me/jikan-rest
-            org.opencontainers.image.documentation=https://github.com/jikan-me/jikan-rest/blob/master/container_usage.md
-            org.opencontainers.image.revision=${{ github.sha }}
-          annotations: |
-            org.opencontainers.image.title=Jikan REST API
-            org.opencontainers.image.description=REST API for Jikan
-            org.opencontainers.image.url=https://jikan.moe
-            org.opencontainers.image.source=https://github.com/jikan-me/jikan-rest
-            org.opencontainers.image.documentation=https://github.com/jikan-me/jikan-rest/blob/master/container_usage.md
-            org.opencontainers.image.revision=${{ github.sha }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@v6
-        env:
-          DOCKER_BUILD_NO_SUMMARY: true
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          # let's use github action cache storage
-          cache-from: type=gha,scope=buildkit_${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=buildkit_${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
-          annotations: ${{ steps.meta.outputs.annotations }}
-          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-
-      - name: Transform platform value
-        id: platform_transform
-        run: echo "platform=$(echo '${{ matrix.platform }}' | sed 's/\//_/g')" >> $GITHUB_OUTPUT
-
-      - name: Upload digest
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-${{ steps.platform_transform.outputs.platform }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  publish-app-image:
-    runs-on: ubuntu-latest
-    name: Publish app container image
-    needs:
-      - build-app-image
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          pattern: digests-*
-          merge-multiple: true
-          path: /tmp/digests
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Read metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY_IMAGE }}
-            jikanme/jikan-rest
-          labels: |
-            org.opencontainers.image.title=Jikan REST API
-            org.opencontainers.image.description=REST API for Jikan
-            org.opencontainers.image.url=https://jikan.moe
-            org.opencontainers.image.source=https://github.com/jikan-me/jikan-rest
-            org.opencontainers.image.documentation=https://github.com/jikan-me/jikan-rest/blob/master/container_usage.md
-            org.opencontainers.image.revision=${{ github.sha }}
-          tags: |
-            type=raw,value=${{ inputs.image_tag || github.ref_name }}
-            type=raw,value=${{ github.ref_type == 'tag' && 'latest' || 'latest-nightly' }}
-            type=sha
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -142,16 +36,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=raw,value=${{ github.event.inputs.image_tag }}
 
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
