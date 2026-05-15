@@ -23,7 +23,10 @@ secrets:
 
 services:
   jikan_rest:
-    image: "docker.io/jikanme/jikan-rest:${_JIKAN_API_VERSION:-latest}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jikan-rest:local
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
       - jikan_network
@@ -116,3 +119,9 @@ services:
       - typesense-data:/data
     ports:
       - "8108/tcp"
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep '[t]ypesense-server' > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
