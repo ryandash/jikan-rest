@@ -21,6 +21,7 @@ class AnimeIndexer extends Command
     protected $signature = 'indexer:anime
                             {--failed : Run only entries that failed to index last time}
                             {--resume : Resume from the last position}
+                            {--last-from-db : Start from the mal_id after the last anime in the database}
                             {--reverse : Start from the end of the array}
                             {--index=0 : Start from a specific index}
                             {--delay=3 : Set a delay between requests}';
@@ -59,8 +60,9 @@ class AnimeIndexer extends Command
 
         $failed = $this->option('failed') ?? false;
         $resume = $this->option('resume') ?? false;
+        $lastFromDb = $this->option('last-from-db') ?? false;
         $reverse = $this->option('reverse') ?? false;
-        $delay = $this->option('delay') ?? 3;
+        $delay = $this->option('delay') ?? 1;
         $index = $this->option('index') ?? 0;
 
         $index = (int)$index;
@@ -79,6 +81,26 @@ class AnimeIndexer extends Command
         // start from the end
         if ($reverse) {
             $this->ids = array_reverse($this->ids);
+        }
+
+        // Start from last mal_id in database
+        if ($lastFromDb) {
+            $lastAnime = \App\Anime::query()->orderBy('mal_id', 'desc')->first(['mal_id']);
+            if ($lastAnime) {
+                $lastMalId = (int)$lastAnime->mal_id;
+                $index = array_search($lastMalId, $this->ids);
+                if ($index !== false) {
+                    $index = $index + 1; // Start from the next ID
+                    $this->info("Found last anime in database: MAL ID {$lastMalId}");
+                    $this->info("Starting from index: {$index}");
+                } else {
+                    $this->warn("Last anime (MAL ID {$lastMalId}) not found in ID cache, starting from 0");
+                    $index = 0;
+                }
+            } else {
+                $this->info("No anime in database, starting from beginning");
+                $index = 0;
+            }
         }
 
         // Resume

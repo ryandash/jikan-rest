@@ -59,7 +59,8 @@ RUN set -ex \
     && chmod -R a+w storage/ \
     && chown -R jikanapi:jikanapi /app \
     && chmod +x docker-entrypoint.php \
-    && chmod +x docker-entrypoint.sh
+    && chmod +x docker-entrypoint.sh \
+    && chmod +x docker-entrypoint-sidecar.sh
 
 EXPOSE 8080
 EXPOSE 2114
