@@ -50,10 +50,10 @@ class AnimeUpdateSidecar extends Command
             $this->info("\n=== STEP 2: Running AnimeSweepIndexer ===");
             $this->call('indexer:anime-sweep');
 
-            // Step 3: Run AnimeIndexer starting from last mal_id in database
+            // Step 3: Run AnimeIndexer with --skip-existing to only index missing anime
             $this->info("\n=== STEP 3: Running AnimeIndexer ===");
             $this->call('indexer:anime', [
-                '--last-from-db' => true
+                '--skip-existing' => true
             ]);
 
             Log::info('Anime Update Sidecar daily cycle completed successfully');
