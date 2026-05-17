@@ -16,3 +16,5 @@ fi
 # --airing-months: Number of months after airing end to stop updating (default: 1)
 exec php /app/artisan sidecar:anime-update \
   --airing-months="${ANIME_SIDECAR_AIRING_MONTHS:-1}"
+
+sleep 86400
