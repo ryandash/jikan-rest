@@ -19,8 +19,8 @@ The sidecar runs once per day with the following workflow:
 
 **Step 3: AnimeIndexer**
 - Fetches new anime from the Jikan API that aren't yet in the database
-- Intelligently starts from the last indexed anime to avoid redundant processing
-- Uses the `--last-from-db` option to find the last mal_id in the database and continue from there
+- Intelligently filters out existing mal_ids to avoid redundant processing
+- Uses the `--skip-existing` option to automatically exclude any anime already in the database
 
 ## Architecture
 
@@ -32,9 +32,9 @@ The sidecar runs once per day with the following workflow:
    - Comprehensive error handling and logging
 
 2. **Enhanced AnimeIndexer**: `app/Console/Commands/Indexer/AnimeIndexer.php`
-   - New `--last-from-db` option finds the last anime in the database
-   - Automatically continues from the next mal_id to avoid reprocessing
-   - Saves time by not going through already-indexed anime
+   - New `--skip-existing` option filters out anime already in the database
+   - Only processes missing mal_ids from the Jikan API cache
+   - Saves time by not processing already-indexed anime
 
 3. **Docker Service**: `jikan_anime_update_sidecar` in `docker-compose.yml`
    - Isolated container running the daily sidecar command
@@ -137,8 +137,8 @@ Update complete - Updated: 145, Skipped: 5, Failed: 0
 [Sweep output...]
 
 === STEP 3: Running AnimeIndexer ===
-Found last anime in database: MAL ID 52589
-Starting from index: 45821
+Found 45821 existing mal_ids in database
+Processing 12345 missing mal_ids
 [Indexing output...]
 
 ✓ Daily update cycle completed successfully
@@ -167,12 +167,12 @@ The sidecar uses the following algorithm:
 
 4. **Data Updated**: All anime fields are refreshed (title, scores, episodes, status, etc.)
 
-### Step 3: AnimeIndexer with --last-from-db
+### Step 3: AnimeIndexer with --skip-existing
 
-1. **Find Last Anime**: Query MongoDB for the anime with highest mal_id
-2. **Find Position**: Locate that mal_id in the Jikan API cache
-3. **Start Indexing**: Resume from the next ID to avoid redundancy
-4. **Add New Anime**: All new anime from the API are added to the database
+1. **Fetch All IDs**: Get all mal_ids from the Jikan API cache
+2. **Query Database**: Retrieve all existing mal_ids from MongoDB
+3. **Filter Differences**: Remove existing mal_ids from the API list
+4. **Index Missing Anime**: Only process the missing mal_ids that need to be added
 
 ## Data Synchronized
 
@@ -326,8 +326,8 @@ docker-compose run --rm jikan_anime_update_sidecar php artisan sidecar:anime-upd
 # Run AnimeSweepIndexer only
 docker-compose run --rm jikan_anime_update_sidecar php artisan indexer:anime-sweep
 
-# Run AnimeIndexer with --last-from-db
-docker-compose run --rm jikan_anime_update_sidecar php artisan indexer:anime --last-from-db
+# Run AnimeIndexer with --skip-existing
+docker-compose run --rm jikan_anime_update_sidecar php artisan indexer:anime --skip-existing
 ```
 
 ### Custom Deployment
