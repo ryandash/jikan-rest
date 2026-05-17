@@ -21,7 +21,7 @@ class AnimeIndexer extends Command
     protected $signature = 'indexer:anime
                             {--failed : Run only entries that failed to index last time}
                             {--resume : Resume from the last position}
-                            {--last-from-db : Start from the mal_id after the last anime in the database}
+                            {--skip-existing : Skip mal_ids that already exist in the database}
                             {--reverse : Start from the end of the array}
                             {--index=0 : Start from a specific index}
                             {--delay=3 : Set a delay between requests}';
@@ -60,7 +60,7 @@ class AnimeIndexer extends Command
 
         $failed = $this->option('failed') ?? false;
         $resume = $this->option('resume') ?? false;
-        $lastFromDb = $this->option('last-from-db') ?? false;
+        $skipExisting = $this->option('skip-existing') ?? false;
         $reverse = $this->option('reverse') ?? false;
         $delay = $this->option('delay') ?? 1;
         $index = $this->option('index') ?? 0;
@@ -83,23 +83,14 @@ class AnimeIndexer extends Command
             $this->ids = array_reverse($this->ids);
         }
 
-        // Start from last mal_id in database
-        if ($lastFromDb) {
-            $lastAnime = \App\Anime::query()->orderBy('mal_id', 'desc')->first(['mal_id']);
-            if ($lastAnime) {
-                $lastMalId = (int)$lastAnime->mal_id;
-                $index = array_search($lastMalId, $this->ids);
-                if ($index !== false) {
-                    $index = $index + 1; // Start from the next ID
-                    $this->info("Found last anime in database: MAL ID {$lastMalId}");
-                    $this->info("Starting from index: {$index}");
-                } else {
-                    $this->warn("Last anime (MAL ID {$lastMalId}) not found in ID cache, starting from 0");
-                    $index = 0;
-                }
-            } else {
-                $this->info("No anime in database, starting from beginning");
-                $index = 0;
+        // Skip existing mal_ids in the database
+        if ($skipExisting) {
+            $existingMalIds = $this->getExistingMalIds();
+            $this->ids = array_values(array_diff($this->ids, $existingMalIds));
+            
+            if (count($existingMalIds) > 0) {
+                $this->info("Found " . count($existingMalIds) . " existing mal_ids in database");
+                $this->info("Processing " . count($this->ids) . " missing mal_ids");
             }
         }
 
@@ -190,6 +181,18 @@ class AnimeIndexer extends Command
         }
 
         return json_decode(Storage::get('indexer/indexer_anime.failed'));
+    }
+
+    /**
+     * Get all existing mal_ids from the database
+     *
+     * @return array
+     */
+    private function getExistingMalIds() : array
+    {
+        return \App\Anime::query()
+            ->pluck('mal_id')
+            ->toArray();
     }
 
 }
