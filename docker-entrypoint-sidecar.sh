@@ -1,20 +1,16 @@
 #!/bin/bash
 set -eo pipefail
 
-# Run initialization
-status=0
 php /app/docker-entrypoint.php
-status=$?
 
-if [[ $status -ne 0 ]]; then
-  echo "Failed to initialize sidecar"
-  exit $status
-fi
+while true; do
+  echo "Running anime update cycle at $(date)"
 
-# Run the anime update sidecar command once daily
-# Parameters:
-# --airing-months: Number of months after airing end to stop updating (default: 1)
-exec php /app/artisan sidecar:anime-update \
-  --airing-months="${ANIME_SIDECAR_AIRING_MONTHS:-1}"
+  if ! php /app/artisan sidecar:anime-update \
+      --airing-months="${ANIME_SIDECAR_AIRING_MONTHS:-1}"; then
+    echo "Anime update cycle failed at $(date)"
+  fi
 
-sleep 86400
+  echo "Sleeping for 24 hours..."
+  sleep 86400
+done
