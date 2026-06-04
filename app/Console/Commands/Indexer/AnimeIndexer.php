@@ -62,7 +62,7 @@ class AnimeIndexer extends Command
         $resume = $this->option('resume') ?? false;
         $skipExisting = $this->option('skip-existing') ?? false;
         $reverse = $this->option('reverse') ?? false;
-        $delay = $this->option('delay') ?? 1;
+        $delay = $this->option('delay') ?? 3;
         $index = $this->option('index') ?? 0;
 
         $index = (int)$index;
