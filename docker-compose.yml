@@ -1,11 +1,12 @@
 version: '3.8'
+
 volumes:
-  mongo-data: { }
-  redis-data: { }
-  typesense-data: { }
+  mongo-data: {}
+  redis-data: {}
+  typesense-data: {}
 
 networks:
-  jikan_network: { }
+  jikan_network: {}
 
 secrets:
   db_username:
@@ -21,7 +22,9 @@ secrets:
   typesense_api_key:
     file: typesense_api_key.txt
 
+
 services:
+
   jikan_rest:
     build:
       context: .
@@ -35,25 +38,26 @@ services:
       - db_password
       - typesense_api_key
       - redis_password
-    environment:
-      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
     env_file:
       - ./docker/config/.env.compose
+    environment:
+      RR_WORKERS: 1   # 🔥 critical RAM reduction
     ports:
-      - '8080:8080/tcp'
+      - "8080:8080"
     hostname: jikan-rest-api
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget --spider -q "http://127.0.0.1:2114/health?plugin=http"' ]
-      interval: 2s
-      timeout: 2s
-    links:
-      - mongodb:mongodb
-      - redis:redis
-      - typesense:typesense
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:2114/health?plugin=http"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     depends_on:
-      mongodb: { condition: service_healthy }
-      redis: { condition: service_healthy }
-      typesense: { condition: service_healthy }
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      typesense:
+        condition: service_healthy
+
 
   mongodb:
     image: docker.io/mongo:focal
@@ -63,23 +67,28 @@ services:
       - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - 27017/tcp
-    command: "--wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB:-1.0}"
+    command: >
+      mongod
+      --wiredTigerCacheSizeGB 0.25
+      --quiet
+      --syncdelay 60
     networks:
       - jikan_network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/db_admin_username
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/db_admin_password
+      MONGO_INITDB_DATABASE: jikan_admin
     secrets:
       - db_username
       - db_password
       - db_admin_username
       - db_admin_password
-    environment:
-      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/db_admin_username
-      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/db_admin_password
-      MONGO_INITDB_DATABASE: jikan_admin
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh mongodb://localhost:27017 --quiet
       interval: 30s
       timeout: 10s
       retries: 5
+
 
   redis:
     image: docker.io/redis:6-alpine
@@ -91,15 +100,17 @@ services:
     command:
       - /bin/sh
       - -c
-      - redis-server --requirepass "$$(cat /run/secrets/redis_password)"
+      - redis-server --requirepass "$$(cat /run/secrets/redis_password)" --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data:rw
     ports:
       - '6379/tcp'
     healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
-      interval: 500ms
-      timeout: 1s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+
 
   typesense:
     image: docker.io/typesense/typesense:0.24.1
@@ -111,48 +122,14 @@ services:
       - jikan_network
     command:
       - -c
-      - TYPESENSE_API_KEY="$$(cat /run/secrets/typesense_api_key)" /opt/typesense-server --data-dir /data
-    deploy:
-      restart_policy:
-        condition: none
+      - TYPESENSE_API_KEY="$$(cat /run/secrets/typesense_api_key)" /opt/typesense-server --data-dir /data --cache-max-memory 256mb
     volumes:
       - typesense-data:/data
     ports:
       - "8108/tcp"
     healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep '[t]ypesense-server' > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "ps aux | grep '[t]ypesense-server' > /dev/null"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
-
-  jikan_anime_update_sidecar:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: jikan-rest:local
-    user: "${APP_UID:-10001}:${APP_GID:-10001}"
-    networks:
-      - jikan_network
-    secrets:
-      - db_username
-      - db_password
-      - typesense_api_key
-      - redis_password
-    environment:
-      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
-      APP_URL: "http://jikan_rest:8080"
-    env_file:
-      - ./docker/config/.env.compose
-    hostname: jikan-anime-update-sidecar
-    links:
-      - mongodb:mongodb
-      - redis:redis
-      - jikan_rest:jikan_rest
-    depends_on:
-      mongodb: { condition: service_healthy }
-      redis: { condition: service_healthy }
-      jikan_rest: { condition: service_healthy }
-    entrypoint: /app/docker-entrypoint-sidecar.sh
-    restart: unless-stopped
-
+      start_period: 5s

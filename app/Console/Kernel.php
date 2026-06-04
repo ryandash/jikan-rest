@@ -3,7 +3,6 @@
 namespace App\Console;
 
 use App\Console\Commands\CacheRemove;
-use App\Console\Commands\AnimeUpdateSidecar;
 use App\Console\Commands\Indexer;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
@@ -17,7 +16,6 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         CacheRemove::class,
-        AnimeUpdateSidecar::class,
         Indexer\CommonIndexer::class,
         Indexer\AnimeScheduleIndexer::class,
         Indexer\CurrentSeasonIndexer::class,
@@ -62,6 +60,5 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('indexer:manga-sweep')
             ->daily();
-
     }
 }

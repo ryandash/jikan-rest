@@ -52,7 +52,7 @@ logs:
   # Logging level can be "panic", "error", "warning", "info", "debug".
   #
   # Default: "debug"
-  level: info
+  level: warning
 
   # Encoding format can be "console" or "json" (last is preferred for production usage).
   #
@@ -75,12 +75,12 @@ http:
   # HTTP access logs
   #
   # Default: false
-  access_logs: true
+  access_logs: false
 
   # Maximal incoming request size in megabytes. Zero means no limit.
   #
   # Default: 0
-  max_request_size: 256
+  max_request_size: 128
 
   # Middlewares for the http plugin, order is important. Allowed values is: "headers", "gzip".
   #
@@ -105,7 +105,7 @@ http:
     #
     # Default: <empty map>
     response:
-      X-Powered-By: "RoadRunner"
+      X-Powered-By: "Extra Time and mondey"
 
   # Settings for serving static content (docs: https://roadrunner.dev/docs/http-static).
   static:
@@ -123,29 +123,29 @@ http:
     #
     # Default: <empty map>
     response:
-      X-Powered-By: "RoadRunner"
+      X-Powered-By: "Extra Time and mondey"
 
   # Workers pool settings.
   pool:
     # How many worker processes will be started. Zero (or nothing) means the number of logical CPUs.
     #
     # Default: 0
-    num_workers: 0
+    num_workers: 1
 
     # Maximal count of worker executions. Zero (or nothing) means no limit.
     #
     # Default: 0
-    max_jobs: 64
+    max_jobs: 32
 
     # Timeout for worker allocation. Zero means no limit.
     #
     # Default: 60s
-    allocate_timeout: 10s
+    allocate_timeout: 20s
 
     # Timeout for worker destroying before process killing. Zero means no limit.
     #
     # Default: 60s
-    destroy_timeout: 10s
+    destroy_timeout: 20s
 
     # Supervisor is used to control http workers (previous name was "limit", docs:
     # https://roadrunner.dev/docs/php-limit). "Soft" limits will not interrupt current request processing. "Hard"
@@ -154,7 +154,7 @@ http:
       # Maximal worker memory usage in megabytes (soft limit). Zero means no limit.
       #
       # Default: 0
-      max_worker_memory: 128
+      max_worker_memory: 96MB
 
       # Maximal job lifetime (hard limit). Zero means no limit.
       #
@@ -200,9 +200,9 @@ status:
 
 service:
   laravel_queue_worker_1:
-    command: "php /app/artisan queue:work --queue=high,default"
+    command: "php /app/artisan queue:work --queue=high,default --sleep=3 --tries=3"
     process_num: 1
-    restart_sec: 5
+    restart_sec: 10
   supercronic:
     command: "supercronic /etc/supercronic/laravel"
 
