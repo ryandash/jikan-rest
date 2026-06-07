@@ -1,25 +1,36 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 generate_secret() {
-    openssl rand -base64 48 | tr -d '\n'
+  openssl rand -base64 48 | tr -d '\r\n'
 }
 
 generate_username() {
-    printf "admin_%s" "$(openssl rand -hex 4)"
+  printf "admin_%s" "$(openssl rand -hex 4)"
 }
 
 write_if_missing() {
-    local filename="$1"
-    local value="$2"
+  local filename="$1"
+  local value="$2"
 
-    if [ ! -f "$filename" ]; then
-        printf "%s" "$value" > "$filename"
-        echo "Created $filename"
+  # If anything already exists (file OR directory), skip safely
+  if [ -e "$filename" ]; then
+    if [ -d "$filename" ]; then
+      echo "ERROR: $filename exists and is a directory — refusing to overwrite"
     else
-        echo "Skipped $filename (already exists)"
+      echo "Skipped $filename (already exists)"
     fi
+    return 0
+  fi
+
+  # Clean value just in case
+  value="$(printf '%s' "$value" | tr -d '\r\n')"
+
+  printf "%s" "$value" > "$filename"
+
+  echo "Created $filename"
+  echo "Size: $(wc -c < "$filename") bytes"
+  xxd "$filename"
 }
 
 echo "Generating secrets in project root..."
