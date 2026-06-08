@@ -20,6 +20,7 @@ class Kernel extends ConsoleKernel
         Indexer\AnimeScheduleIndexer::class,
         Indexer\CurrentSeasonIndexer::class,
         Indexer\AnimeIndexer::class,
+        Indexer\AnimeRefreshCommand::class,
         Indexer\MangaIndexer::class,
         Indexer\GenreIndexer::class,
         Indexer\ProducersIndexer::class,

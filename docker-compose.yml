@@ -1,5 +1,4 @@
 version: "3.8"
-
 volumes:
   mongo-data: {}
   redis-data: {}
@@ -51,7 +50,6 @@ services:
         ]
       interval: 10s
       timeout: 3s
-      retries: 3
     depends_on:
       mongodb: { condition: service_healthy }
       redis: { condition: service_healthy }
