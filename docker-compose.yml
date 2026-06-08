@@ -1,5 +1,3 @@
-version: '3.8'
-
 volumes:
   mongo-data: {}
   redis-data: {}
@@ -49,7 +47,6 @@ services:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:2114/health?plugin=http"]
       interval: 10s
       timeout: 3s
-      retries: 3
     depends_on:
       mongodb:
         condition: service_healthy
@@ -133,3 +130,41 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+
+  jikan_refresh_sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jikan-rest:local
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
+    networks:
+      - jikan_network
+    secrets:
+      - db_username
+      - db_password
+      - db_admin_username
+      - db_admin_password
+      - redis_password
+      - typesense_api_key
+    env_file:
+      - ./docker/config/.env.compose
+    environment:
+      # Refresh interval in seconds (86400 = 24 hours)
+      REFRESH_INTERVAL: "86400"
+      # Number of anime to process in each batch
+      BATCH_SIZE: "100"
+      # Delay between API requests in seconds
+      DELAY: "3"
+    entrypoint: /bin/sh
+    command: /app/docker-entrypoint-refresh.sh
+    volumes:
+      - ./docker-entrypoint-refresh.sh:/app/docker-entrypoint-refresh.sh:ro
+    depends_on:
+      jikan_rest:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped

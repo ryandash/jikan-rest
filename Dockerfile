@@ -1,6 +1,6 @@
-FROM docker.io/spiralscout/roadrunner:2.12.3 as roadrunner
-FROM docker.io/composer:2.6.6 as composer
-FROM docker.io/mlocati/php-extension-installer:2.1.77 as php-ext-installer
+FROM docker.io/spiralscout/roadrunner:2.12.3 AS roadrunner
+FROM docker.io/composer:2.6.6 AS composer
+FROM docker.io/mlocati/php-extension-installer:2.1.77 AS php-ext-installer
 
 FROM php:8.1.27-bullseye
 
@@ -30,12 +30,14 @@ LABEL org.opencontainers.image.source=https://github.com/jikan-me/jikan-rest
 # Minimal runtime dependencies only
 RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
         git \
+        wget \
         unzip \
         curl \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSLo /usr/bin/supercronic \
-    https://github.com/aptible/supercronic/releases/latest/download/supercronic-linux-$(dpkg --print-architecture) \
+    && wget -q "https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-$(dpkg --print-architecture)" \
+	   -O /usr/bin/supercronic \
     && chmod +x /usr/bin/supercronic \
 	&& mkdir /etc/supercronic \
 	&& echo '*/5 * * * * php /app/artisan schedule:run' > /etc/supercronic/laravel \
