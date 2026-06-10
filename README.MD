@@ -25,9 +25,11 @@ Please read the [manual installation guide](https://github.com/jikan-me/jikan-re
 For any additional help, join our [Discord server](http://discord.jikan.moe/).
 
 ### 🐳 Docker Installation
-We distribute the app as a container image, so you can just run it:
 ```bash
-docker run -d --name=jikan-rest -p 8080:8080 -v ./.env:/app/.env jikanme/jikan-rest:latest
+git clone https://github.com/ryandash/jikan-rest.git
+navigate into jikan-rest
+run generate_secrets.sh
+docker compose up --build -d
 ```
 
 For more information please refer to our [container usage guide](container_usage.md).
