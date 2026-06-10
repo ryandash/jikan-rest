@@ -5,7 +5,6 @@ namespace App\Console\Commands\Indexer;
 use App\Anime;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -50,7 +49,7 @@ class AnimeRefreshCommand extends Command
             $this->call('indexer:anime-sweep');
 
             $this->info("\nGetting anime that are currently airing, recently finished (+ 1 month), or not yet aired...");
-            $refreshMalIds = $this->getAnimaToRefresh();
+            $refreshMalIds = $this->getAnimeToRefresh();
 
             if (empty($refreshMalIds)) {
                 $this->info('No anime to refresh.');
@@ -130,7 +129,7 @@ class AnimeRefreshCommand extends Command
      *
      * @return array
      */
-    private function getAnimaToRefresh(): array
+    private function getAnimeToRefresh(): array
     {
         $oneMonthAgo = Carbon::now()->subMonth();
         $now = Carbon::now();
@@ -139,34 +138,26 @@ class AnimeRefreshCommand extends Command
         // 1. Are currently airing (airing == true)
         // 2. Finished airing within the last month (aired.to >= oneMonthAgo)
         // 3. Haven't aired yet (aired.from > now OR aired.from is null)
-        $refreshAnime = DB::table('anime')
-            ->select('mal_id', 'aired', 'airing', 'status', 'title')
-            ->where(function ($query) use ($oneMonthAgo, $now) {
-                // Currently airing
-                $query->where('airing', true)
-                    // OR finished airing within the last month
-                    ->orWhere(function ($q) use ($oneMonthAgo) {
-                        $q->where('airing', false)
-                          ->where('aired.to', '>=', $oneMonthAgo->toIso8601String());
-                    })
-                    // OR hasn't aired yet (future air date)
-                    ->orWhere(function ($q) use ($now) {
-                        $q->where('airing', false)
-                          ->where('aired.from', '>', $now->toIso8601String());
-                    })
-                    // OR has no air date set
-                    ->orWhere(function ($q) {
-                        $q->where('airing', false)
-                          ->whereNull('aired.from');
-                    });
-            })
-            ->get();
+        $refreshAnime = Anime::where(function ($query) use ($oneMonthAgo, $now) {
+            // Currently airing
+            $query->where('airing', true)
+                // OR finished airing within the last month
+                ->orWhere(function ($q) use ($oneMonthAgo) {
+                    $q->where('airing', false)
+                      ->whereJsonPath('aired->to', '>=', $oneMonthAgo->toIso8601String());
+                })
+                // OR hasn't aired yet (future air date)
+                ->orWhere(function ($q) use ($now) {
+                    $q->where('airing', false)
+                      ->whereJsonPath('aired->from', '>', $now->toIso8601String());
+                })
+                // OR has no air date set
+                ->orWhere(function ($q) {
+                    $q->where('airing', false)
+                      ->whereJsonNull('aired->from');
+                });
+        })->pluck('mal_id')->toArray();
 
-        $malIds = [];
-        foreach ($refreshAnime as $anime) {
-            $malIds[] = $anime->mal_id;
-        }
-
-        return $malIds;
+        return $refreshAnime;
     }
 }
