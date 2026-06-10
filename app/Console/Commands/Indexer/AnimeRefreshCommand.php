@@ -21,7 +21,6 @@ class AnimeRefreshCommand extends Command
      * @var string
      */
     protected $signature = 'indexer:anime-refresh
-                            {--batch-size=100 : Number of anime to process in each batch}
                             {--delay=3 : Delay between API requests in seconds}';
 
     /**
@@ -38,11 +37,10 @@ class AnimeRefreshCommand extends Command
      */
     public function handle(): int
     {
-        $batchSize = (int)$this->option('batch-size');
         $delay = (int)$this->option('delay');
 
         $this->info('Starting anime refresh process...');
-        $this->info("Batch size: {$batchSize}, Delay: {$delay}s\n");
+        $this->info("Delay: {$delay}s\n");
 
         try {
             $this->info("\nCalling indexer:anime-sweep");
@@ -56,43 +54,36 @@ class AnimeRefreshCommand extends Command
             } else {
                 $this->info("Found " . count($refreshMalIds) . " anime to refresh\n");
 
-                // Delete old data for these anime
-                $this->info('Deleting old anime data...');
-                $deleteCount = Anime::whereIn('mal_id', $refreshMalIds)->delete();
-                $this->info("Deleted {$deleteCount} anime records\n");
-
-                // Process in batches
-                $batches = array_chunk($refreshMalIds, $batchSize);
-                $totalBatches = count($batches);
-
-                $this->info("Processing " . count($refreshMalIds) . " anime in {$totalBatches} batches...\n");
-
+                $totalAnime = count($refreshMalIds);
                 $failedIds = [];
                 $successCount = 0;
 
-                foreach ($batches as $batchIndex => $batch) {
-                    $this->info("Processing batch " . ($batchIndex + 1) . "/{$totalBatches}");
+                foreach ($refreshMalIds as $index => $malId) {
+                    $this->info("Processing anime " . ($index + 1) . "/{$totalAnime} (MAL ID: {$malId})");
 
-                    foreach ($batch as $malId) {
+                    try {
+                        // Delete the anime record first
+                        Anime::where('mal_id', $malId)->delete();
+                        $this->info("  Deleted old data");
+
+                        // Then fetch and refresh the anime
                         $url = env('APP_URL') . "/v4/anime/{$malId}";
+                        $this->info("  Fetching anime {$malId}...");
+                        $response = json_decode(@file_get_contents($url), true);
 
-                        try {
-                            $this->info("  Fetching anime {$malId}...");
-                            $response = json_decode(@file_get_contents($url), true);
-
-                            if ($response && !isset($response['error'])) {
-                                $successCount++;
-                            } else {
-                                $errorMsg = $response['error'] ?? 'Unknown error';
-                                $this->warn("    [FAILED] {$errorMsg}");
-                                $failedIds[] = $malId;
-                            }
-
-                            sleep($delay);
-                        } catch (\Exception $e) {
-                            $this->warn("    [FAILED] " . $e->getMessage());
+                        if ($response && !isset($response['error'])) {
+                            $successCount++;
+                            $this->info("  ✓ Refreshed successfully");
+                        } else {
+                            $errorMsg = $response['error'] ?? 'Unknown error';
+                            $this->warn("  ✗ [FAILED] {$errorMsg}");
                             $failedIds[] = $malId;
                         }
+
+                        sleep($delay);
+                    } catch (\Exception $e) {
+                        $this->warn("  ✗ [FAILED] " . $e->getMessage());
+                        $failedIds[] = $malId;
                     }
                 }
 
