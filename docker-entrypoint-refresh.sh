@@ -40,7 +40,6 @@ if [ -f /run/secrets/typesense_api_key ]; then
 fi
 
 APP_URL=${APP_URL:-"http://jikan_rest:8080"}
-BATCH_SIZE=${BATCH_SIZE:-100}
 DELAY=${DELAY:-3}
 REFRESH_INTERVAL=${REFRESH_INTERVAL:-86400}  # Default: 24 hours
 
@@ -50,7 +49,6 @@ log() {
 
 log "Starting Jikan Anime Refresh Sidecar"
 log "APP_URL: $APP_URL"
-log "BATCH_SIZE: $BATCH_SIZE"
 log "DELAY: $DELAY"
 log "REFRESH_INTERVAL: $REFRESH_INTERVAL seconds"
 log "DB_HOST: $DB_HOST"
@@ -84,7 +82,7 @@ while true; do
     cd /app
 
     # Run the refresh command
-    if php artisan indexer:anime-refresh --batch-size=$BATCH_SIZE --delay=$DELAY; then
+    if php artisan indexer:anime-refresh --delay=$DELAY; then
         log "Anime refresh completed successfully"
     else
         log "ERROR: Anime refresh failed"
