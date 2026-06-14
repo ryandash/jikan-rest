@@ -27,6 +27,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: jikan-rest:local
+    restart: unless-stopped
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
       - jikan_network
@@ -57,6 +58,7 @@ services:
 
   mongodb:
     image: docker.io/mongo:focal
+    restart: unless-stopped
     hostname: mongodb
     volumes:
       - mongo-data:/data/db
@@ -91,6 +93,7 @@ services:
 
   redis:
     image: docker.io/redis:6-alpine
+    restart: unless-stopped
     hostname: redis
     secrets:
       - redis_password
@@ -115,6 +118,7 @@ services:
 
   typesense:
     image: docker.io/typesense/typesense:0.24.1
+    restart: unless-stopped
     hostname: typesense
     entrypoint: /bin/sh
     secrets:
@@ -128,3 +132,40 @@ services:
       - typesense-data:/data
     ports:
       - "8108/tcp"
+
+  jikan_refresh_sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jikan-rest:local
+    restart: unless-stopped
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
+    networks:
+      - jikan_network
+    secrets:
+      - db_username
+      - db_password
+      - db_admin_username
+      - db_admin_password
+      - redis_password
+      - typesense_api_key
+    env_file:
+      - ./docker/config/.env.compose
+    environment:
+      # Refresh interval in seconds (86400 = 24 hours)
+      REFRESH_INTERVAL: "86400"
+      # Number of anime to process in each batch
+      BATCH_SIZE: "100"
+      # Delay between API requests in seconds
+      DELAY: "3"
+    entrypoint: /bin/sh
+    command: /app/docker-entrypoint-refresh.sh
+    volumes:
+      - ./docker-entrypoint-refresh.sh:/app/docker-entrypoint-refresh.sh:ro
+    depends_on:
+      jikan_rest:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
