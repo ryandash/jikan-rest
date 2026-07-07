@@ -70,7 +70,8 @@ RUN composer install \
 
 COPY --chown=jikanapi:jikanapi . .
 
-RUN chown -R jikanapi:jikanapi /app
+RUN chown -R jikanapi:jikanapi /app \
+    && chmod +x /app/docker-entrypoint.sh
 
 USER jikanapi
 
