@@ -2,7 +2,7 @@
 set -euo pipefail
 
 generate_secret() {
-  openssl rand -base64 48 | tr -d '\r\n'
+  openssl rand -hex 48 | tr -d '\r\n'
 }
 
 generate_username() {
