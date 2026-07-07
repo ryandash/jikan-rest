@@ -23,11 +23,7 @@ secrets:
 
 services:
   jikan_rest:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: jikan-rest:local
-    restart: unless-stopped
+    image: "ghcr.io/ryandash/jikan-rest:latest"
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
       - jikan_network
@@ -36,21 +32,25 @@ services:
       - db_password
       - typesense_api_key
       - redis_password
+    environment:
+      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
     env_file:
       - ./docker/config/.env.compose
-    environment:
-      RR_WORKERS: 1 # 🔥 critical RAM reduction
     ports:
-      - "8080:8080"
+      - "8080:8080/tcp"
     hostname: jikan-rest-api
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "wget --spider -q http://127.0.0.1:2114/health?plugin=http",
+          'wget --spider -q "http://127.0.0.1:2114/health?plugin=http"',
         ]
-      interval: 10s
-      timeout: 3s
+      interval: 2s
+      timeout: 2s
+    links:
+      - mongodb:mongodb
+      - redis:redis
+      - typesense:typesense
     depends_on:
       mongodb: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -58,29 +58,24 @@ services:
 
   mongodb:
     image: docker.io/mongo:focal
-    restart: unless-stopped
     hostname: mongodb
     volumes:
       - mongo-data:/data/db
       - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - 27017/tcp
-    command: >
-      mongod
-      --wiredTigerCacheSizeGB 0.25
-      --quiet
-      --syncdelay 60
+    command: "--wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB:-1.0}"
     networks:
       - jikan_network
-    environment:
-      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/db_admin_username
-      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/db_admin_password
-      MONGO_INITDB_DATABASE: jikan_admin
     secrets:
       - db_username
       - db_password
       - db_admin_username
       - db_admin_password
+    environment:
+      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/db_admin_username
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/db_admin_password
+      MONGO_INITDB_DATABASE: jikan_admin
     healthcheck:
       test:
         [
@@ -93,7 +88,6 @@ services:
 
   redis:
     image: docker.io/redis:6-alpine
-    restart: unless-stopped
     hostname: redis
     secrets:
       - redis_password
@@ -102,7 +96,7 @@ services:
     command:
       - /bin/sh
       - -c
-      - redis-server --requirepass "$$(cat /run/secrets/redis_password)" --maxmemory 128mb --maxmemory-policy allkeys-lru
+      - redis-server --requirepass "$$(cat /run/secrets/redis_password)"
     volumes:
       - redis-data:/data:rw
     ports:
@@ -118,7 +112,6 @@ services:
 
   typesense:
     image: docker.io/typesense/typesense:0.24.1
-    restart: unless-stopped
     hostname: typesense
     entrypoint: /bin/sh
     secrets:
@@ -127,17 +120,17 @@ services:
       - jikan_network
     command:
       - -c
-      - TYPESENSE_API_KEY="$$(cat /run/secrets/typesense_api_key)" /opt/typesense-server --data-dir /data --cache-max-memory 256mb
+      - TYPESENSE_API_KEY="$$(cat /run/secrets/typesense_api_key)" /opt/typesense-server --data-dir /data
+    deploy:
+      restart_policy:
+        condition: none
     volumes:
       - typesense-data:/data
     ports:
       - "8108/tcp"
 
   jikan_refresh_sidecar:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: jikan-rest:local
+    image: "ghcr.io/ryandash/jikan-rest:latest"
     restart: unless-stopped
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
