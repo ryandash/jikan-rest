@@ -34,6 +34,7 @@ services:
       - redis_password
     environment:
       PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+      RR_NUM_WORKERS: "0"
     env_file:
       - ./docker/config/.env.compose
     ports:
