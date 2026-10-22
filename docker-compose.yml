@@ -24,8 +24,8 @@ secrets:
 
 services:
   mongodb:
+    container_name: mongodb
     image: docker.io/mongo:focal
-    hostname: mongodb
     volumes:
       - mongo-data:/data/db
       - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
@@ -55,8 +55,8 @@ services:
       retries: 5
 
   redis:
+    container_name: redis
     image: docker.io/redis:6-alpine
-    hostname: redis
     secrets:
       - redis_password
     networks:
@@ -79,8 +79,8 @@ services:
       timeout: 1s
 
   typesense:
-    image: docker.io/typesense/typesense:0.24.1
-    hostname: typesense
+    container_name: typesense
+    image: docker.io/typesense/typesense:30.2
     entrypoint: /bin/sh
     secrets:
       - typesense_api_key
@@ -88,17 +88,17 @@ services:
       - jikan_network
     command:
       - -c
-      - TYPESENSE_API_KEY="$$(cat /run/secrets/typesense_api_key)" /opt/typesense-server --data-dir /data
-    deploy:
-      restart_policy:
-        condition: none
+      - |
+        exec /opt/typesense-server --data-dir /data --api-key="$$(cat /run/secrets/typesense_api_key)"
+    restart: unless-stopped
     volumes:
       - typesense-data:/data
     ports:
-      - "8108/tcp"
+      - "8108:8108"
+
   jikan_rest:
+    container_name: jikan_rest
     image: ghcr.io/ryandash/jikan-rest:latest
-    hostname: jikan_rest
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
       - jikan_network
@@ -133,8 +133,8 @@ services:
       typesense: { condition: service_started }
 
   jikan_refresh_sidecar:
+    container_name: jikan_sidecar
     image: ghcr.io/ryandash/jikan-rest:latest
-    hostname: jikan_sidecar
     restart: unless-stopped
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
