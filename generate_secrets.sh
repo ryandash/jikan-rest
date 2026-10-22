@@ -30,12 +30,12 @@ write_if_missing() {
 
   echo "Created $filename"
   echo "Size: $(wc -c < "$filename") bytes"
-  xxd "$filename"
 }
 
 echo "Generating secrets in project root..."
 
 # Passwords / API keys
+write_if_missing "app_key.txt" "base64:$(openssl rand -base64 32 | tr -d '\r\n')"
 write_if_missing "db_admin_password.txt" "$(generate_secret)"
 write_if_missing "db_password.txt" "$(generate_secret)"
 write_if_missing "redis_password.txt" "$(generate_secret)"

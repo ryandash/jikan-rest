@@ -2,10 +2,8 @@
 
 namespace App;
 
-use Jenssegers\Mongodb\Eloquent\Model;
-use Typesense\LaravelTypesense\Interfaces\TypesenseDocument;
 
-abstract class JikanApiSearchableModel extends JikanApiModel implements TypesenseDocument
+abstract class JikanApiSearchableModel extends JikanApiModel
 {
     use JikanSearchable;
 

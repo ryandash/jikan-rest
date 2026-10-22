@@ -213,6 +213,14 @@ class AnimeSearchEndpointTest extends TestCase
         $this->assertCount($limitCount, $content["data"]);
     }
 
+    public function testSearchWithoutDateFiltersReturnsResults()
+    {
+        $content = $this->getJsonResponse();
+
+        $this->seeStatusCode(200);
+        $this->assertIsArray($content["data"]);
+    }
+
     /**
      * @dataProvider emptyDateRangeProvider
      */

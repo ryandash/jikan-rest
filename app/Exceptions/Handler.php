@@ -10,9 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Jikan\Exception\BadResponseException as JikanBadResponseException;
-use GuzzleHttp\Exception\BadResponseException;
 use Jikan\Exception\ParserException;
-use Laravel\Lumen\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Predis\Connection\ConnectionException;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpFoundation\Exception\BadRequestException;
@@ -121,7 +120,7 @@ class Handler extends ExceptionHandler
 
         // BadResponseException from Jikan PHP API
         // This is basically the response MyAnimeList returns to Jikan
-        if ($e instanceof BadResponseException || $e instanceof JikanBadResponseException) {
+        if ($e instanceof JikanBadResponseException) {
             switch ($e->getCode()) {
                 case 404:
 //                    $this->set404Cache($request, $e);

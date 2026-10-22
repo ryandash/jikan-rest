@@ -16,7 +16,6 @@ use Spatie\LaravelData\Attributes\Validation\AfterOrEqual;
 use Spatie\LaravelData\Attributes\Validation\BeforeOrEqual;
 use Spatie\LaravelData\Attributes\Validation\DateFormat;
 use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Sometimes;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Attributes\WithTransformer;
@@ -50,7 +49,6 @@ final class QueryMangaListOfUserCommand extends QueryListOfUserCommand
         BeforeOrEqual("published_to"),
         DateFormat("Y-m-d"),
         Sometimes,
-        Required,
         WithCast(DateTimeInterfaceCast::class),
         WithTransformer(DateTimeInterfaceTransformer::class),
         MapInputName("published_from")
@@ -61,7 +59,6 @@ final class QueryMangaListOfUserCommand extends QueryListOfUserCommand
         AfterOrEqual("published_from"),
         DateFormat("Y-m-d"),
         Sometimes,
-        Required,
         WithCast(DateTimeInterfaceCast::class),
         WithTransformer(DateTimeInterfaceTransformer::class),
         MapInputName("published_to")

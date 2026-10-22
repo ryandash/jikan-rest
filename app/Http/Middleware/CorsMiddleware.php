@@ -4,28 +4,23 @@ namespace App\Http\Middleware;
 
 use Fruitcake\Cors\CorsService;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Middleware\HandleCors;
-use Laravel\Lumen\Http\ResponseFactory;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CorsMiddleware extends HandleCors
 {
-    public function __construct(Container $container, CorsService $cors, private readonly ResponseFactory $responseFactory)
+    public function __construct(Container $container, CorsService $cors)
     {
         parent::__construct($container, $cors);
     }
 
-    private function wrapResponse(SymfonyResponse $response): Response
+    private function wrapResponse(SymfonyResponse $response): SymfonyResponse
     {
-        $lumenResponse = $this->responseFactory->make($response->getContent(), $response->getStatusCode(), $response->headers->all());
-        $lumenResponse->setProtocolVersion("1.1");
-        return $lumenResponse;
+        $response->setProtocolVersion('1.1');
+        return $response;
     }
 
-    public function handle($request, \Closure $next): Response|JsonResponse|RedirectResponse
+    public function handle($request, \Closure $next): SymfonyResponse
     {
         if (!$this->hasMatchingPath($request)) {
             return $next($request);

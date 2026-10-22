@@ -18,7 +18,7 @@ class DatabaseRepository extends RepositoryQuery implements Repository
         return $this->queryable()->newModelInstance();
     }
 
-    public function getByMalId(int $id): JikanApiModel|array|null
+    public function getByMalId(int $id): JikanApiModel|array|\stdClass|null
     {
         $results = $this->getAllByMalId($id);
 

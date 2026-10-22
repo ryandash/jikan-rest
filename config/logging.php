@@ -56,13 +56,13 @@ return [
 
         'single' => [
             'driver' => 'single',
-            'path' => storage_path('logs/lumen.log'),
+            'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/daily/lumen.log'),
+            'path' => storage_path('logs/daily/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
 //            'replace_placeholders' => true, // enabled by default on 10.x - IDK what it does

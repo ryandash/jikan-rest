@@ -3,7 +3,6 @@
 namespace App;
 
 use App\Concerns\FilteredByLetter;
-use Jikan\Jikan;
 use Jikan\Request\Character\CharacterRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 

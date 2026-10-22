@@ -17,7 +17,6 @@ use Spatie\LaravelData\Attributes\Validation\BeforeOrEqual;
 use Spatie\LaravelData\Attributes\Validation\DateFormat;
 use Spatie\LaravelData\Attributes\Validation\Max;
 use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Sometimes;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Attributes\WithTransformer;
@@ -61,7 +60,6 @@ final class QueryAnimeListOfUserCommand extends QueryListOfUserCommand
         BeforeOrEqual("aired_to"),
         DateFormat("Y-m-d"),
         Sometimes,
-        Required,
         WithCast(DateTimeInterfaceCast::class),
         WithTransformer(DateTimeInterfaceTransformer::class),
         MapInputName("aired_from")
@@ -72,7 +70,6 @@ final class QueryAnimeListOfUserCommand extends QueryListOfUserCommand
         AfterOrEqual("aired_from"),
         DateFormat("Y-m-d"),
         Sometimes,
-        Required,
         WithCast(DateTimeInterfaceCast::class),
         WithTransformer(DateTimeInterfaceTransformer::class),
         MapInputName("aired_to")

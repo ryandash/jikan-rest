@@ -2,28 +2,27 @@
 
 namespace App\Dto\Concerns;
 
-use Illuminate\Support\Collection;
 use Spatie\LaravelData\Support\DataConfig;
 use Spatie\LaravelData\Support\DataProperty;
 
 /**
  * A trait for preparing the incoming data before passing it through the data pipeline.
  * All preparation logic lives here.
- * https://spatie.be/docs/laravel-data/v3/advanced-usage/pipeline
+ * https://spatie.be/docs/laravel-data/v4/advanced-usage/pipeline
  */
 trait PreparesData
 {
-    public static function prepareForPipeline(Collection $properties): Collection
+    public static function prepareForPipeline(array $properties): array
     {
         // let's always set the limit parameter to the globally configured default value
-        if (property_exists(static::class, "limit") && !$properties->has("limit")) {
-            $properties->put("limit", max_results_per_page(
-                property_exists(static::class, "defaultLimit") ? static::$defaultLimit : null));
+        if (property_exists(static::class, "limit") && !array_key_exists("limit", $properties)) {
+            $properties["limit"] = max_results_per_page(
+                property_exists(static::class, "defaultLimit") ? static::$defaultLimit : null
+            );
         }
 
         // we want to cast "true" and "false" string values to boolean before validation, so let's take all properties
-        // of the class which are bool or bool|Optional type, and using their name read the values from the incoming
-        // collection, and if they are present have such a value, convert them.
+        // of the class which are bool or bool|Optional type, then convert their supplied values.
         $dataClass = app(DataConfig::class)->getDataClass(static::class);
         foreach ($dataClass->properties as $property) {
             /**
@@ -32,8 +31,8 @@ trait PreparesData
             // the name can be different in the $properties variable, so let's check if there is an input name mapping
             // for the property and use that instead if present.
             $propertyRawName = $property->inputMappedName ?? $property->name;
-            if ($properties->has($propertyRawName)) {
-                $propertyVal = $properties->get($propertyRawName);
+            if (array_key_exists($propertyRawName, $properties)) {
+                $propertyVal = $properties[$propertyRawName];
                 if ($property->type->acceptsType("bool")) {
                     if ($propertyVal === "true") {
                         $propertyVal = true;
@@ -48,9 +47,9 @@ trait PreparesData
                 }
 
                 if (!is_null($propertyVal)) {
-                    $properties->put($propertyRawName, $propertyVal);
+                    $properties[$propertyRawName] = $propertyVal;
                 } else {
-                    $properties->forget($propertyRawName);
+                    unset($properties[$propertyRawName]);
                 }
             }
         }

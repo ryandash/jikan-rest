@@ -1,0 +1,14 @@
+services:
+  jikan_rest:
+    image: jikan-rest-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: build
+
+  jikan_refresh_sidecar:
+    image: jikan-rest-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: build

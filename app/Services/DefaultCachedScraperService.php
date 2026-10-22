@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use Jikan\MyAnimeList\MalClient;
 use JMS\Serializer\SerializerInterface;
 use MongoDB\BSON\UTCDateTime;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use stdClass;
 
 /**
  * A service which scrapes data from MAL if cache is expired or empty
@@ -114,21 +114,23 @@ final class DefaultCachedScraperService implements CachedScraperService
 
     private function dbResultSetToCachedData(Collection $dbResults): CachedData
     {
-        if (!$dbResults->isEmpty()) {
-            $item = $dbResults->first();
-            return $this->dbRecordToCachedData($item);
-        }
-        else {
-            $item = collect();
+        $item = $dbResults->first();
+
+        if ($item === null) {
+            return CachedData::from(collect());
         }
 
-        return CachedData::from($item);
+        return $this->dbRecordToCachedData($item);
     }
 
-    private function dbRecordToCachedData(JikanApiModel|array $item): CachedData
+    private function dbRecordToCachedData(JikanApiModel|array|stdClass $item): CachedData
     {
         if ($item instanceof JikanApiModel) {
             return CachedData::fromModel($item);
+        }
+
+        if ($item instanceof stdClass) {
+            $item = get_object_vars($item);
         }
 
         return CachedData::fromArray($item);
@@ -187,14 +189,14 @@ final class DefaultCachedScraperService implements CachedScraperService
         if ($resultsEmpty) {
             $meta = [
                 // Using Carbon here for testability
-                'createdAt' => new UTCDateTime(Carbon::now()->getPreciseTimestamp(3)),
+                'createdAt' => new UTCDateTime((int) Carbon::now()->getPreciseTimestamp(3)),
                 'request_hash' => $cacheKey
             ];
         }
 
         // Update `modifiedAt` meta
         // Using Carbon here for testability
-        $meta['modifiedAt'] = new UTCDateTime(Carbon::now()->getPreciseTimestamp(3));
+        $meta['modifiedAt'] = new UTCDateTime((int) Carbon::now()->getPreciseTimestamp(3));
 
         // join meta data with response
         return $meta + $scraperResponse;

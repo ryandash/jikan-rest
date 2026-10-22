@@ -6,6 +6,7 @@ use BackedEnum;
 use Spatie\LaravelData\Casts\Cast;
 use Spatie\LaravelData\Casts\Uncastable;
 use Spatie\LaravelData\Exceptions\CannotCastEnum;
+use Spatie\LaravelData\Support\Creation\CreationContext;
 use Spatie\LaravelData\Support\DataProperty;
 use Throwable;
 
@@ -19,7 +20,7 @@ final class EnumCast implements Cast
     /**
      * @throws CannotCastEnum
      */
-    public function cast(DataProperty $property, mixed $value, array $context): mixed
+    public function cast(DataProperty $property, mixed $value, array $properties, CreationContext $context): mixed
     {
         $type = $this->type ?? $property->type->findAcceptedTypeForBaseType(BackedEnum::class);
 

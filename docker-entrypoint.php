@@ -28,7 +28,9 @@ if (!file_exists(".env")) {
     $writer = new \MirazMac\DotEnv\Writer(__DIR__ . '/' . '.env');
 
     foreach ($safe_defaults as $env_var_name => $env_var_default) {
-        $writer->set("SCOUT_DRIVER", env($env_var_name, $env_var_default));
+        $value = env($env_var_name, $env_var_default);
+        $value = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
+        $writer->set($env_var_name, $value);
     }
     $writer->write();
 }
@@ -36,26 +38,31 @@ if (!file_exists(".env")) {
 // We'd like to support Container secrets. So we'll check if any of the env vars has a __FILE suffix
 // then we'll try to load the file and set the env var to the contents of the file.
 // https://docs.docker.com/engine/swarm/secrets/
-// Additionally we need to write the secrets to the .env file so the workers in roadrunner can access them.
-// (it might just pass down the global env vars, but haven't tested that yet)
-$envWriter = new \MirazMac\DotEnv\Writer(__DIR__ . '/' . '.env');
 $itemsWritten = 0;
 foreach (array_keys($current_env) as $env_key) {
-    if (!str_contains($env_key, "__FILE")) {
+    if (!str_ends_with($env_key, "__FILE")) {
         continue;
     }
-    if (!file_exists($current_env[$env_key])) {
-        echo "Couldn't load secret: " . $_ENV[$env_key] . PHP_EOL;
-        continue;
+
+    $secretPath = $current_env[$env_key];
+    if (!is_file($secretPath)) {
+        throw new RuntimeException("Couldn't load secret file configured by {$env_key}.");
     }
-    $originalKey = str_replace("__FILE", "", $env_key);
-    $secretsFileContents = file_get_contents($current_env[$env_key]);
-    $envWriter->set($originalKey, str_replace(["\n", "\r"], "", $secretsFileContents));
+
+    $secretContents = file_get_contents($secretPath);
+    if ($secretContents === false) {
+        throw new RuntimeException("Couldn't read secret file configured by {$env_key}.");
+    }
+
+    $originalKey = substr($env_key, 0, -strlen("__FILE"));
+    $secretValue = str_replace(["\n", "\r"], "", $secretContents);
+    putenv("{$originalKey}={$secretValue}");
+    $_ENV[$originalKey] = $secretValue;
+    $_SERVER[$originalKey] = $secretValue;
     $itemsWritten++;
 }
 
 if ($itemsWritten > 0) {
-    $envWriter->write();
     echo "Secrets loaded successfully.\n";
 }
 

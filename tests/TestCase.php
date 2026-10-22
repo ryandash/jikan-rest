@@ -14,18 +14,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Testing\TestResponse;
 use Jikan\MyAnimeList\MalClient;
-use Laravel\Lumen\Application;
-use Laravel\Lumen\Testing\TestCase as LumenTestCase;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Testing\TestCase as LaravelTestCase;
 use MongoDB\BSON\UTCDateTime;
 use Spatie\Enum\Faker\FakerEnumProvider;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-abstract class TestCase extends LumenTestCase
+abstract class TestCase extends LaravelTestCase
 {
     use MakesHttpRequestsEx;
     protected Generator $faker;
     protected int $maxResultsPerPage;
+    protected ?TestResponse $response = null;
 
     protected function dummyScraperResultDocument(string $uri, string $mediaType, array $content, ?string $wrapKey = null): array
     {
@@ -129,14 +130,12 @@ abstract class TestCase extends LumenTestCase
     /**
      * Creates the application.
      *
-     * @return \Laravel\Lumen\Application
+     * @return \Illuminate\Foundation\Application
      */
-    public function createApplication()
+    public function createApplication(): Application
     {
-        /**
-         * @var Application $app
-         */
         $app = require __DIR__.'/../bootstrap/app.php';
+        $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
         // a http client which fails the tests if requests are leaking to MAL.
         $mockHttpClient = \Mockery::mock(HttpClientInterface::class);
         /** @noinspection PhpParamsInspection */
@@ -151,15 +150,14 @@ abstract class TestCase extends LumenTestCase
         $app['config']->set('jikan.micro_caching_enabled', false);
         $app->register(TestServiceProvider::class);
         Container::setInstance($app);
-        /** @noinspection PhpParamsInspection */
         Facade::setFacadeApplication($app);
 
         return $app;
     }
 
-    protected function setUpTraits()
+    protected function setUpTraits(): array
     {
-        parent::setUpTraits();
+        $traits = parent::setUpTraits();
         $uses = array_flip(class_uses_recursive(get_class($this)));
 
         // we want to empty the search index
@@ -172,6 +170,8 @@ abstract class TestCase extends LumenTestCase
             /** @noinspection PhpUndefinedMethodInspection */
             $this->beginDatabaseTransaction();
         }
+
+        return $traits;
     }
 
     public function assertPaginationData(int $expectedCount, ?int $expectedTotal = null, ?int $perPage = null): TestResponse
@@ -210,5 +210,14 @@ abstract class TestCase extends LumenTestCase
         ]);
         $this->app->instance("HttpClient", $httpClient);
         $this->app->instance("JikanParser", new MalClient($httpClient));
+    }
+
+    public function __call(string $name, array $arguments): mixed
+    {
+        if ($this->response !== null && is_callable([$this->response, $name])) {
+            return $this->response->{$name}(...$arguments);
+        }
+
+        throw new \BadMethodCallException("Method {$name} does not exist.");
     }
 }

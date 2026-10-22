@@ -14,7 +14,6 @@ use Spatie\LaravelData\Attributes\Validation\Between;
 use Spatie\LaravelData\Attributes\Validation\DateFormat;
 use Spatie\LaravelData\Attributes\Validation\Numeric;
 use Spatie\LaravelData\Attributes\Validation\Prohibits;
-use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Sometimes;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Attributes\WithTransformer;
@@ -44,7 +43,6 @@ class MediaSearchCommand extends SearchCommand
         BeforeOrEqual("end_date"),
         DateFormat("Y-m-d"),
         Sometimes,
-        Required,
         WithCast(DateTimeInterfaceCast::class),
         WithTransformer(DateTimeInterfaceTransformer::class)
     ]
@@ -54,7 +52,6 @@ class MediaSearchCommand extends SearchCommand
         AfterOrEqual("start_date"),
         DateFormat("Y-m-d"),
         Sometimes,
-        Required,
         WithCast(DateTimeInterfaceCast::class),
         WithTransformer(DateTimeInterfaceTransformer::class)
     ]

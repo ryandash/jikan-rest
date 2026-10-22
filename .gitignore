@@ -23,3 +23,4 @@ db_password.txt
 db_admin_password.txt
 redis_password.txt
 typesense_api_key.txt
+app_key.txt

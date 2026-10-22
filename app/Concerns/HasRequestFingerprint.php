@@ -4,7 +4,6 @@ namespace App\Concerns;
 
 use App\Http\HttpHelper;
 use Illuminate\Http\Request;
-use Spatie\LaravelData\Resolvers\DataFromSomethingResolver;
 
 /**
  * Helper trait for data transfer objects
@@ -17,8 +16,7 @@ trait HasRequestFingerprint
 
     public static function fromRequest(Request $request): ?static
     {
-        $result = app(DataFromSomethingResolver::class)
-                    ->withoutMagicalCreation()->execute(static::class, $request);
+        $result = static::factory()->withoutMagicalCreation()->from($request);
         $result->fingerprint = HttpHelper::resolveRequestFingerprint($request);
         return $result;
     }

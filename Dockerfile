@@ -1,8 +1,8 @@
-FROM docker.io/spiralscout/roadrunner:2.12.3 AS roadrunner
-FROM docker.io/composer:2.6.6 AS composer
+FROM docker.io/spiralscout/roadrunner:2025.1.15 AS roadrunner
+FROM docker.io/composer:2 AS composer
 FROM docker.io/mlocati/php-extension-installer:2.1.77 AS php-ext-installer
 
-FROM php:8.1.27-bullseye
+FROM php:8.5.12-bookworm
 
 # Composer + extension installer
 COPY --from=composer /usr/bin/composer /usr/bin/composer
@@ -16,7 +16,7 @@ RUN set -eux; \
     install-php-extensions \
         intl \
         mbstring \
-        mongodb-1.21.5 \
+        mongodb-2.5.5 \
         redis \
         opcache \
         sockets \
@@ -66,11 +66,14 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --no-progress \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --no-scripts
 
 COPY --chown=jikanapi:jikanapi . .
 
-RUN chown -R jikanapi:jikanapi /app \
+RUN mkdir -p /app/bootstrap/cache \
+    && composer dump-autoload --no-dev --optimize \
+    && chown -R jikanapi:jikanapi /app \
     && chmod +x /app/docker-entrypoint.sh
 
 USER jikanapi

@@ -8,6 +8,8 @@ networks:
   jikan_network: {}
 
 secrets:
+  app_key:
+    file: app_key.txt
   db_username:
     file: db_username.txt
   db_password:
@@ -22,41 +24,6 @@ secrets:
     file: typesense_api_key.txt
 
 services:
-  jikan_rest:
-    image: "ghcr.io/ryandash/jikan-rest:latest"
-    user: "${APP_UID:-10001}:${APP_GID:-10001}"
-    networks:
-      - jikan_network
-    secrets:
-      - db_username
-      - db_password
-      - typesense_api_key
-      - redis_password
-    environment:
-      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
-      RR_NUM_WORKERS: "0"
-    env_file:
-      - ./docker/config/.env.compose
-    ports:
-      - "8080:8080/tcp"
-    hostname: jikan-rest-api
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'wget --spider -q "http://127.0.0.1:2114/health?plugin=http"',
-        ]
-      interval: 2s
-      timeout: 2s
-    links:
-      - mongodb:mongodb
-      - redis:redis
-      - typesense:typesense
-    depends_on:
-      mongodb: { condition: service_healthy }
-      redis: { condition: service_healthy }
-      typesense: { condition: service_started }
-
   mongodb:
     image: docker.io/mongo:focal
     hostname: mongodb
@@ -69,6 +36,7 @@ services:
     networks:
       - jikan_network
     secrets:
+      - app_key
       - db_username
       - db_password
       - db_admin_username
@@ -129,14 +97,50 @@ services:
       - typesense-data:/data
     ports:
       - "8108/tcp"
+  jikan_rest:
+    image: ghcr.io/ryandash/jikan-rest:latest
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
+    networks:
+      - jikan_network
+    secrets:
+      - app_key
+      - db_username
+      - db_password
+      - typesense_api_key
+      - redis_password
+    environment:
+      PS1: '\[\033[1;32m\]\[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+      RR_NUM_WORKERS: "${RR_NUM_WORKERS:-2}"
+    env_file:
+      - ./docker/config/.env.compose
+    ports:
+      - "8080:8080/tcp"
+    hostname: jikan-rest-api
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'wget --spider -q "http://127.0.0.1:2114/health?plugin=http"',
+        ]
+      interval: 2s
+      timeout: 2s
+    links:
+      - mongodb:mongodb
+      - redis:redis
+      - typesense:typesense
+    depends_on:
+      mongodb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      typesense: { condition: service_started }
 
   jikan_refresh_sidecar:
-    image: "ghcr.io/ryandash/jikan-rest:latest"
+    image: ghcr.io/ryandash/jikan-rest:latest
     restart: unless-stopped
     user: "${APP_UID:-10001}:${APP_GID:-10001}"
     networks:
       - jikan_network
     secrets:
+      - app_key
       - db_username
       - db_password
       - db_admin_username
@@ -148,10 +152,10 @@ services:
     environment:
       # Refresh interval in seconds (86400 = 24 hours)
       REFRESH_INTERVAL: "86400"
-      # Number of anime to process in each batch
-      BATCH_SIZE: "100"
       # Delay between API requests in seconds
       DELAY: "3"
+    healthcheck:
+      disable: true
     entrypoint: /bin/sh
     command: /app/docker-entrypoint-refresh.sh
     volumes:

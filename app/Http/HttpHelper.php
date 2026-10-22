@@ -70,9 +70,9 @@ class HttpHelper
 
     public static function getRouteName(Request $request) : string
     {
-        $route = explode('\\', $request->route()[1]['uses'] ?? 'App\Undefined');
+        $routeAction = $request->route()?->getActionName();
 
-        return end($route);
+        return $routeAction === null ? 'Undefined' : class_basename($routeAction);
     }
 
     public static function getRequestUriHash(Request $request) : string

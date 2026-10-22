@@ -2,7 +2,8 @@
 
 namespace App\Testing;
 
-use Typesense\LaravelTypesense\Typesense;
+use Typesense\Client;
+use Typesense\Exceptions\ObjectNotFound;
 
 /**
  * @codeCoverageIgnore
@@ -25,23 +26,14 @@ trait ScoutFlush
     public function runScoutFlush(): void
     {
         if (config("scout.driver") === "typesense") {
-            /**
-             * @var Typesense $typeSenseClient
-             */
-            $typeSenseClient = app(Typesense::class);
-            // more optimized approach for quicker tests.
+            $typesenseClient = app(Client::class);
             foreach ($this->searchIndexModelCleanupList as $model) {
                 $modelInstance = new $model;
-                $collection = $typeSenseClient->getCollectionIndex($modelInstance);
-                // we count items by exporting
-                $items = $collection->documents->export();
-                if (strlen($items) > 1) {
-                    $typeSenseClient->deleteDocuments($collection, [
-                        "filter_by" => "mal_id:>0",
-                        "batch_size" => 500
-                    ]);
-
-                    $typeSenseClient->deleteCollection($modelInstance->searchableAs());
+                try {
+                    $collection = $typesenseClient->getCollections()->{$modelInstance->searchableAs()};
+                    $collection->retrieve();
+                    $collection->delete();
+                } catch (ObjectNotFound) {
                 }
             }
         }

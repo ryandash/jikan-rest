@@ -15,7 +15,7 @@ final class CachedDataTest extends TestCase
         $now = Carbon::now();
         return [
             "mongodb bson date time" => [
-                $now, new UTCDateTime($now->getPreciseTimestamp(3))
+                $now, new UTCDateTime((int) $now->getPreciseTimestamp(3))
             ],
             "built-in datetime" => [
                 $now, $now->toDateTime()

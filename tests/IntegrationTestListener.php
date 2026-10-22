@@ -11,11 +11,12 @@ use PHPUnit\Framework\TestListener;
 // fixme: with phpunit 10, this should be replaced with the new event system
 class IntegrationTestListener implements TestListener
 {
-    private \Laravel\Lumen\Application $app;
+    private \Illuminate\Foundation\Application $app;
 
     public function __construct()
     {
         $app = require __DIR__.'/../bootstrap/app.php';
+        $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
         $database = env('DB_DATABASE', 'jikan_tests');
         $app['config']->set('database.connections.mongodb.database', $database === 'jikan' ? 'jikan_tests' : $database);
         $app['config']->set('jikan.micro_caching_enabled', false);
@@ -63,11 +64,7 @@ class IntegrationTestListener implements TestListener
             $kernel = $app->make(
                 'Illuminate\Contracts\Console\Kernel'
             );
-            try {
-                $kernel->call('migrate:fresh', []);
-            } catch (\Exception $ex) {
-                dd($ex);
-            }
+            $kernel->call('migrate:fresh', []);
         }
     }
 

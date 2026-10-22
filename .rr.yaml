@@ -5,7 +5,7 @@
 # Please note that this config is used within the docker container.
 
 # RR configuration version
-version: "2.7"
+version: "3"
 
 # Remote Procedures Calling (docs: https://roadrunner.dev/docs/beep-beep-rpc)
 # Is used for connecting to RoadRunner server from your PHP workers.
@@ -20,7 +20,11 @@ server:
   # Worker starting command, with any required arguments.
   #
   # This option is required.
-  command: "php ./vendor/bin/rr-worker start --relay-dsn unix:///var/run/rr/rr-relay.sock"
+  command: "php ./vendor/bin/roadrunner-worker"
+
+  env:
+    - APP_BASE_PATH: "/app"
+    - LARAVEL_OCTANE: "1"
 
   ## Environment variables for the worker processes.
   ##
@@ -32,7 +36,7 @@ server:
   # Worker relay can be: "pipes", TCP (eg.: tcp://127.0.0.1:6001), or socket (eg.: unix:///var/run/rr-relay.sock).
   #
   # Default: "pipes"
-  relay: "unix:///var/run/rr/rr-relay.sock"
+  relay: "pipes"
 
   # Timeout for relay connection establishing (only for socket and TCP port relay).
   #

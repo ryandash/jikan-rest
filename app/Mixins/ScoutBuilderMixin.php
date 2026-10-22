@@ -5,7 +5,7 @@ use Illuminate\Container\Container;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Laravel\Scout\Contracts\PaginatesEloquentModels;
-use Typesense\LaravelTypesense\Engines\TypesenseEngine;
+use App\Services\TypesenseScoutEngine;
 
 /** @mixin \Laravel\Scout\Builder */
 class ScoutBuilderMixin
@@ -19,7 +19,7 @@ class ScoutBuilderMixin
     {
         return function (int|null $perPage = null, string $pageName = 'page', int|null $page = null) {
             /** @var \Laravel\Scout\Builder $this */
-            /** @var TypesenseEngine $engine */
+            /** @var TypesenseScoutEngine $engine */
             $engine = $this->engine();
             if ($engine instanceof PaginatesEloquentModels) {
                 return $engine->paginate($this, $perPage, $page)->appends('query', $this->query);
@@ -34,14 +34,17 @@ class ScoutBuilderMixin
             $searchEngineResultChunkSize = 250;
             $rawResults = $engine->paginate($this, $searchEngineResultChunkSize, 1);
             $found = $engine->getTotalCount($rawResults);
-            if ($found > 250) {
-                $additionalPages = $found / $searchEngineResultChunkSize;
-                $currentAdditionalPage = 1.0;
-                while ($currentAdditionalPage <= $additionalPages) {
-                    $temp = $engine->paginate($this, $searchEngineResultChunkSize, 1 + round($currentAdditionalPage));
-                    $rawResults = array_merge_recursive($rawResults, $temp);
-                    $currentAdditionalPage += 1.0;
-                }
+            $totalPages = (int) ceil($found / $searchEngineResultChunkSize);
+            for ($additionalPage = 2; $additionalPage <= $totalPages; $additionalPage++) {
+                $additionalResults = $engine->paginate(
+                    $this,
+                    $searchEngineResultChunkSize,
+                    $additionalPage
+                );
+                $rawResults['hits'] = array_merge(
+                    $rawResults['hits'] ?? [],
+                    $additionalResults['hits'] ?? []
+                );
             }
 
             // Notice forPage call here. We use that to only get the records for the current page from db.

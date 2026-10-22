@@ -48,16 +48,17 @@ use App\Support\CacheOptions;
 use App\Support\DefaultMediator;
 use App\Support\JikanConfig;
 use App\Support\JikanUnitOfWork;
+use App\Providers\SerializerFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Http\JsonResponse;
-use Laravel\Lumen\Application;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\Response;
 use Illuminate\Support\Env;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Collection;
 use Jikan\MyAnimeList\MalClient;
 use Laravel\Scout\Builder as ScoutBuilder;
-use Typesense\LaravelTypesense\Typesense;
+use Typesense\Client as TypesenseClient;
 use App\Features;
 
 class AppServiceProvider extends ServiceProvider
@@ -82,6 +83,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(
+            \Illuminate\Contracts\Debug\ExceptionHandler::class,
+            \App\Exceptions\Handler::class
+        );
+        $this->app->singleton('HttpClient', fn () => \Symfony\Component\HttpClient\HttpClient::create([
+            'timeout' => env('SOURCE_TIMEOUT', 1),
+        ]));
+        $this->app->singleton('JikanParser', fn ($app) => new MalClient($app->make('HttpClient')));
+        $this->app->singleton('SerializerV4', fn () => SerializerFactory::createV4());
+        $this->app->singleton(TypesenseClient::class, fn () => new TypesenseClient(config('scout.typesense')));
+        $this->app->afterResolving(\Laravel\Scout\EngineManager::class, function ($manager): void {
+            $manager->extend('typesense', fn ($app) => $app->make(\App\Services\TypesenseScoutEngine::class));
+        });
         $this->app->singleton(JikanConfig::class, fn() => new JikanConfig(config("jikan")));
         $this->app->singleton(\App\Contracts\SearchAnalyticsService::class,
             env("APP_ENV") !== "testing" ? \App\Services\DefaultSearchAnalyticsService::class :
@@ -367,7 +381,7 @@ class AppServiceProvider extends ServiceProvider
         ];
 
         if (Env::get("SCOUT_DRIVER") === "typesense") {
-            $services[] = Typesense::class;
+            $services[] = TypesenseClient::class;
         }
 
         // experimental

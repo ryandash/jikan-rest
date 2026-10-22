@@ -3,7 +3,6 @@
 namespace App\Features;
 
 use App\Dto\QueryMangaListOfUserCommand;
-use App\Http\Resources\V4\UserProfileAnimeListCollection;
 use App\Http\Resources\V4\UserProfileMangaListCollection;
 use App\Http\Resources\V4\UserProfileMangaListResource;
 use App\Support\CachedData;
@@ -32,11 +31,11 @@ final class QueryMangaListOfUserHandler extends RequestHandlerWithScraperCache
 
     public function resource(CachedData $results): JsonResource
     {
-        if ($results->isEmpty()) {
-            return new UserProfileAnimeListCollection([]);
+        $listResults = $results->get("manga", $results->get("anime", []));
+        if ($results->isEmpty() || !is_countable($listResults) || count($listResults) === 0) {
+            return new UserProfileMangaListCollection([]);
         }
 
-        $listResults = $results->get("manga");
         foreach ($listResults as &$result) {
             $result = (new UserProfileMangaListResource($result));
         }
@@ -60,7 +59,7 @@ final class QueryMangaListOfUserHandler extends RequestHandlerWithScraperCache
         $jikanParserRequest = $requestParams->get("jikanParserRequest");
         return $this->scraperService->findList(
             $requestFingerPrint,
-            fn(MalClient $jikan, ?int $page = null) => ["anime" => $jikan->getUserMangaList($jikanParserRequest)],
+            fn(MalClient $jikan, ?int $page = null) => ["manga" => $jikan->getUserMangaList($jikanParserRequest)],
             $requestParams->get("page", 1)
         );
     }

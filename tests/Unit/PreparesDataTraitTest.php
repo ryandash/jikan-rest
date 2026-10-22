@@ -38,8 +38,8 @@ final class PreparesDataTraitTest extends TestCase
      */
     public function testShouldIgnoreEmptyParams($actual, $expected)
     {
-        $sut = PreparesDataFixture::prepareForPipeline(collect($actual));
+        $sut = PreparesDataFixture::prepareForPipeline($actual);
 
-        $this->assertCollectionsStrictlyEqual(collect($expected), $sut);
+        $this->assertCollectionsStrictlyEqual(collect($expected), collect($sut));
     }
 }

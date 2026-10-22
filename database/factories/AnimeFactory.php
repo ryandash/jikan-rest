@@ -152,8 +152,8 @@ class AnimeFactory extends JikanMediaModelFactory
                 $overrides["producers"][] = [
                     "mal_id" => (int)$producerId,
                     "type" => "anime",
-                    "name" => "Producer ${producerId}",
-                    "url" => "https://myanimelist.net/anime/producer/${producerId}/x"
+                    "name" => "Producer {$producerId}",
+                    "url" => "https://myanimelist.net/anime/producer/{$producerId}/x"
                 ];
             }
         }
@@ -175,8 +175,8 @@ class AnimeFactory extends JikanMediaModelFactory
                 $overrides["produces"][] = [
                     "mal_id" => (int)$producerId,
                     "type" => "anime",
-                    "name" => "Producer ${producerId}",
-                    "url" => "https://myanimelist.net/anime/producer/${producerId}/x"
+                    "name" => "Producer {$producerId}",
+                    "url" => "https://myanimelist.net/anime/producer/{$producerId}/x"
                 ];
             }
         }

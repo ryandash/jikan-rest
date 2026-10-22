@@ -39,12 +39,9 @@ class MicroCaching
         if (!$this->isEnabled) {
             return $next($request);
         }
-        if (isset($request->route()[1]['uses'])) {
-            $route = explode('\\', $request->route()[1]['uses']);
-            $route = end($route);
-            if (\in_array($route, self::NO_CACHING)) {
-                return $next($request);
-            }
+        $routeAction = $request->route()?->getActionName();
+        if ($routeAction !== null && \in_array(class_basename($routeAction), self::NO_CACHING, true)) {
+            return $next($request);
         }
 
         // Allow bypass of caching if APP_KEY supplied in auth header

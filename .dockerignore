@@ -21,8 +21,11 @@ node_modules
 .git
 db_username.txt
 db_password.txt
+db_admin_username.txt
+db_admin_password.txt
 redis_password.txt
 typesense_api_key.txt
+app_key.txt
 .phpunit.result.cache
 .env
 docker-compose.yml

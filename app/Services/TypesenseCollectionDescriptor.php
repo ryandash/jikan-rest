@@ -1,8 +1,11 @@
 <?php
 namespace App\Services;
-use Typesense\LaravelTypesense\Typesense;
+
 use App\JikanApiSearchableModel;
+use Illuminate\Database\Eloquent\Model;
+use Typesense\Client;
 use Typesense\Collection as TypesenseCollection;
+use Typesense\Exceptions\ObjectNotFound;
 use Illuminate\Support\Collection;
 
 /**
@@ -12,9 +15,29 @@ final class TypesenseCollectionDescriptor
 {
     private readonly Collection $cache;
 
-    public function __construct(private readonly Typesense $typesense)
+    public function __construct(private readonly Client $typesense)
     {
-        $this->cache = collect();   
+        $this->cache = collect();
+    }
+
+    public function client(): Client
+    {
+        return $this->typesense;
+    }
+
+    public function getCollectionIndex(JikanApiSearchableModel $model): TypesenseCollection
+    {
+        $collections = $this->typesense->getCollections();
+        $collection = $collections->{$model->searchableAs()};
+
+        try {
+            $collection->retrieve();
+        } catch (ObjectNotFound) {
+            $collections->create($model->getCollectionSchema());
+            $collection = $collections->{$model->searchableAs()};
+        }
+
+        return $collection;
     }
 
     public function getSearchableAttributes(JikanApiSearchableModel $model): array
@@ -26,7 +49,7 @@ final class TypesenseCollectionDescriptor
         /**
          * @var TypesenseCollection $collection
          */
-        $collection = $this->typesense->getCollectionIndex($model);
+        $collection = $this->getCollectionIndex($model);
         $collectionDetails = $collection->retrieve();
         $fields = collect($collectionDetails["fields"]);
         $searchableAttributeNames = $fields->pluck("name")->all();

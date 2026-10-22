@@ -54,7 +54,7 @@ class IncrementalIndexer extends Command
             return [];
         }
 
-        $newIdsRaw = file_get_contents("https://raw.githubusercontent.com/purarue/mal-id-cache/master/cache/${mediaType}_cache.json");
+        $newIdsRaw = file_get_contents("https://raw.githubusercontent.com/purarue/mal-id-cache/master/cache/{$mediaType}_cache.json");
         $newIdsHash = sha1($newIdsRaw);
 
         /** @noinspection PhpConditionAlreadyCheckedInspection */

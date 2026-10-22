@@ -17,9 +17,11 @@ trait MakesHttpRequestsEx
      * @param array $headers
      * @return self
      */
-    public function getJson(string $uri, array $headers = []): self
+    public function getJson($uri, array $headers = [], $options = 0): \Illuminate\Testing\TestResponse
     {
-        return $this->json('GET', $uri, [], $headers);
+        $this->response = parent::getJson($uri, $headers, $options);
+
+        return $this->response;
     }
 
     /**

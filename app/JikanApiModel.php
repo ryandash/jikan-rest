@@ -6,10 +6,10 @@ use App\Enums\AnimeRatingEnum;
 use App\Enums\MangaTypeEnum;
 use App\Filters\FilterQueryString;
 use Illuminate\Support\Collection;
-use Jenssegers\Mongodb\Eloquent\Builder;
+use MongoDB\Laravel\Eloquent\Builder;
 use Jikan\Helper\Constants;
 
-class JikanApiModel extends \Jenssegers\Mongodb\Eloquent\Model
+class JikanApiModel extends \MongoDB\Laravel\Eloquent\Model
 {
     use FilterQueryString;
 
@@ -24,7 +24,7 @@ class JikanApiModel extends \Jenssegers\Mongodb\Eloquent\Model
     /** @noinspection PhpUnused */
     public function scopeRandom(Builder $query, int $numberOfRandomItems = 1, bool $sfw = false, bool $unapproved = false): Collection
     {
-        return $query->raw(function(\Jenssegers\Mongodb\Collection $collection) use ($numberOfRandomItems, $sfw, $unapproved) {
+        return $query->raw(function($collection) use ($numberOfRandomItems, $sfw, $unapproved) {
             $sfwFilter = [
                 'demographics.mal_id' => [
                     '$nin' => [

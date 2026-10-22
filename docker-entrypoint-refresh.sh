@@ -15,6 +15,10 @@ fi
 
 # Read Docker secrets and set them as environment variables
 # Laravel uses __FILE suffix to indicate file-based secrets
+if [ -f /run/secrets/app_key ]; then
+  export APP_KEY="$(tr -d '\r\n' < /run/secrets/app_key)"
+fi
+
 if [ -f /run/secrets/db_username ]; then
   export DB_USERNAME=$(cat /run/secrets/db_username)
 fi
