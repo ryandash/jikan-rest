@@ -16,7 +16,7 @@ RUN set -eux; \
     install-php-extensions \
         intl \
         mbstring \
-        mongodb-2.5.5 \
+        mongodb \
         redis \
         opcache \
         sockets \
@@ -27,24 +27,19 @@ COPY --from=roadrunner /usr/bin/rr /usr/bin/rr
 
 LABEL org.opencontainers.image.source=https://github.com/jikan-me/jikan-rest
 
-# Minimal runtime dependencies only
+# Keep only tools needed after the image is built; unzip is required by Composer.
 RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends \
-        openssl \
-        git \
-        wget \
         unzip \
         curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && wget -q "https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-$(dpkg --print-architecture)" \
-	   -O /usr/bin/supercronic \
+    && curl -fsSL "https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-$(dpkg --print-architecture)" \
+        -o /usr/bin/supercronic \
     && chmod +x /usr/bin/supercronic \
-	&& mkdir /etc/supercronic \
-	&& echo '*/5 * * * * php /app/artisan schedule:run' > /etc/supercronic/laravel \
-	&& rm -rf /var/lib/apt/lists/* \
-	# enable opcache for CLI and JIT, docs: <https://www.php.net/manual/en/opcache.configuration.php#ini.opcache.jit>
-	&& echo -e "\nopcache.enable=1\nopcache.enable_cli=1\nopcache.memory_consumption=64\nopcache.interned_strings_buffer=8\nopcache.max_accelerated_files=10000\nopcache.validate_timestamps=0\nrealpath_cache_size=4096K\nrealpath_cache_ttl=600\nopcache.jit_buffer_size=32M\nopcache.jit=1235\n" >> \
-	    ${PHP_INI_DIR}/conf.d/docker-php-ext-opcache.ini
+    && mkdir -p /etc/supercronic \
+    && echo '*/5 * * * * php /app/artisan schedule:run' > /etc/supercronic/laravel \
+    && echo -e "\nopcache.enable=1\nopcache.enable_cli=1\nopcache.memory_consumption=64\nopcache.interned_strings_buffer=8\nopcache.max_accelerated_files=10000\nopcache.validate_timestamps=0\nrealpath_cache_size=4096K\nrealpath_cache_ttl=600\nopcache.jit_buffer_size=32M\nopcache.jit=1235\n" >> \
+        ${PHP_INI_DIR}/conf.d/docker-php-ext-opcache.ini \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN adduser \
     --disabled-password \
