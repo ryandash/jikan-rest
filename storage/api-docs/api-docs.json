@@ -4455,7 +4455,7 @@
                                             "type": "integer"
                                         },
                                         "url": {
-                                            "description": "MyAnimeList URL. This is the URL of the episode's video. If there is no video url, this will be null.",
+                                            "description": "MyAnimeList episode URL",
                                             "type": "string",
                                             "nullable": true
                                         },
@@ -4471,6 +4471,11 @@
                                         "title_romanji": {
                                             "description": "title_romanji",
                                             "type": "string",
+                                            "nullable": true
+                                        },
+                                        "duration": {
+                                            "description": "Episode duration in seconds",
+                                            "type": "integer",
                                             "nullable": true
                                         },
                                         "aired": {
@@ -4495,6 +4500,11 @@
                                         },
                                         "forum_url": {
                                             "description": "Episode discussion forum URL",
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "synopsis": {
+                                            "description": "Episode synopsis",
                                             "type": "string",
                                             "nullable": true
                                         }

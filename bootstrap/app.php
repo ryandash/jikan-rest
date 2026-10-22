@@ -2,6 +2,7 @@
 
 use App\Console\Commands\CacheRemove;
 use App\Console\Commands\Indexer\AnimeIndexer;
+use App\Console\Commands\Indexer\AnimeEpisodesIndexer;
 use App\Console\Commands\Indexer\AnimeRefreshCommand;
 use App\Console\Commands\Indexer\AnimeScheduleIndexer;
 use App\Console\Commands\Indexer\AnimeSweepIndexer;
@@ -100,6 +101,7 @@ return Application::configure(basePath: dirname(__DIR__))
         AnimeScheduleIndexer::class,
         CurrentSeasonIndexer::class,
         AnimeIndexer::class,
+        AnimeEpisodesIndexer::class,
         AnimeRefreshCommand::class,
         MangaIndexer::class,
         GenreIndexer::class,

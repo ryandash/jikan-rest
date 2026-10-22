@@ -204,7 +204,7 @@ class AnimeController extends Controller
      *                   @OA\Property(
      *                       property="url",
      *                       type="string",
-     *                       description="MyAnimeList URL. This is the URL of the episode's video. If there is no video url, this will be null.",
+     *                       description="MyAnimeList episode URL",
      *                       nullable=true
      *                   ),
      *                   @OA\Property(
@@ -222,6 +222,12 @@ class AnimeController extends Controller
      *                       property="title_romanji",
      *                       type="string",
      *                       description="title_romanji",
+     *                       nullable=true
+     *                   ),
+     *                   @OA\Property(
+     *                       property="duration",
+     *                       type="integer",
+     *                       description="Episode duration in seconds",
      *                       nullable=true
      *                   ),
      *                   @OA\Property(
@@ -252,6 +258,12 @@ class AnimeController extends Controller
      *                       property="forum_url",
      *                       type="string",
      *                       description="Episode discussion forum URL",
+     *                       nullable=true
+     *                   ),
+     *                   @OA\Property(
+     *                       property="synopsis",
+     *                       type="string",
+     *                       description="Episode synopsis",
      *                       nullable=true
      *                   ),
      *               ),

@@ -32,7 +32,7 @@ For any additional help, join our [Discord server](http://discord.jikan.moe/).
 git clone https://github.com/ryandash/jikan-rest.git
 navigate into jikan-rest
 run generate_secrets.sh
-docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d
+docker compose up --build -d
 ```
 
 The secret-generation script also creates the Laravel application key used by the local Compose stack. Keep generated secret files private and do not commit them.

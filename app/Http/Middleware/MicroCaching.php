@@ -39,6 +39,10 @@ class MicroCaching
         if (!$this->isEnabled) {
             return $next($request);
         }
+        if ($request->is('v*/anime/*/episodes')) {
+            return $next($request);
+        }
+
         $routeAction = $request->route()?->getActionName();
         if ($routeAction !== null && \in_array(class_basename($routeAction), self::NO_CACHING, true)) {
             return $next($request);

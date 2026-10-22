@@ -22,6 +22,7 @@ class AnimeIndexer extends Command
                             {--failed : Run only entries that failed to index last time}
                             {--resume : Resume from the last position}
                             {--skip-existing : Skip mal_ids that already exist in the database}
+                            {--episodes : Fetch and cache episodes after each anime}
                             {--reverse : Start from the end of the array}
                             {--index=0 : Start from a specific index}
                             {--delay=3 : Set a delay between requests}';
@@ -61,6 +62,7 @@ class AnimeIndexer extends Command
         $failed = $this->option('failed') ?? false;
         $resume = $this->option('resume') ?? false;
         $skipExisting = $this->option('skip-existing') ?? false;
+        $indexEpisodes = $this->option('episodes') ?? false;
         $reverse = $this->option('reverse') ?? false;
         $delay = $this->option('delay') ?? 3;
         $index = $this->option('index') ?? 0;
@@ -130,6 +132,14 @@ class AnimeIndexer extends Command
                     echo "[SKIPPED] Failed to fetch {$url} - {$response['error']}\n";
                     $failedIds[] = $id;
                     Storage::put('indexer/indexer_anime.failed', json_encode($failedIds));
+                } elseif ($indexEpisodes && !isset($response['error'])) {
+                    $episodeStatus = $this->call('indexer:anime-episodes', [
+                        'animeId' => $id,
+                        '--delay' => $delay,
+                    ]);
+                    if ($episodeStatus !== self::SUCCESS) {
+                        echo "[WARNING] Episode indexing failed for anime {$id}\n";
+                    }
                 }
 
                 sleep($delay);

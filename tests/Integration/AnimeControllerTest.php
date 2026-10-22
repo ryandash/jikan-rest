@@ -221,11 +221,11 @@ class AnimeControllerTest extends TestCase
             ]]);
     }
 
-    private function dummyEpisode(): array
+    private function dummyEpisode(int $episodeId = 301): array
     {
         return [
-            "mal_id" => 301,
-            "url" => "https://myanimelist.net/anime/516/Keroro_Gunsou/episode/301",
+            "mal_id" => $episodeId,
+            "url" => null,
             "title" => "Tamama, Exiled from the Nishizawa House, Sir? / Momoka: A Chocolate ",
             "title_japanese" => null,
             "title_romanji" => null,
@@ -237,13 +237,39 @@ class AnimeControllerTest extends TestCase
         ];
     }
 
+    private function givenEpisodeDetails(int $animeId, string $animeSlug, int $episodeId = 301): void
+    {
+        DB::table("anime_episode")->insert(
+            $this->dummyScraperResultDocument(
+                "/v4/anime/$animeId/episodes/$episodeId",
+                "anime",
+                [
+                    "mal_id" => $episodeId,
+                    "url" => "https://myanimelist.net/anime/$animeId/$animeSlug/episode/$episodeId",
+                    "title" => "Tamama, Exiled from the Nishizawa House, Sir? / Momoka: A Chocolate ",
+                    "title_japanese" => null,
+                    "title_romanji" => null,
+                    "duration" => 1404,
+                    "aired" => null,
+                    "filler" => false,
+                    "recap" => false,
+                    "synopsis" => "Episode details"
+                ]
+            )
+        );
+    }
+
     public function testEpisodesOne()
     {
         DB::table("anime_episodes")->insert(
             $this->dummyResultsDocument("/v4/anime/1/episodes", "anime", [
-                $this->dummyEpisode()
+                $this->dummyEpisode(),
+                $this->dummyEpisode(302)
             ])
         );
+        $this->givenEpisodeDetails(1, "Test_Anime");
+        $this->givenEpisodeDetails(1, "Test_Anime", 302);
+
         $this->get('/v4/anime/1/episodes')
             ->seeStatusCode(200)
             ->seeJsonStructure([
@@ -258,14 +284,49 @@ class AnimeControllerTest extends TestCase
                         'title',
                         'title_japanese',
                         'title_romanji',
+                        'duration',
                         'aired',
                         'score',
                         'filler',
                         'recap',
-                        'forum_url'
+                        'forum_url',
+                        'synopsis'
                     ]
                 ]
+            ])
+            ->assertJsonFragment([
+                'url' => 'https://myanimelist.net/anime/1/Test_Anime/episode/301',
+                'duration' => 1404,
+                'synopsis' => 'Episode details'
+            ])
+            ->assertJsonFragment([
+                'url' => 'https://myanimelist.net/anime/1/Test_Anime/episode/302',
+                'duration' => 1404,
+                'synopsis' => 'Episode details'
             ]);
+
+        $cachedList = DB::table("anime_episodes")
+            ->where("request_hash", "request:anime:" . sha1("/v4/anime/1/episodes"))
+            ->first();
+        $this->assertSame(
+            "https://myanimelist.net/anime/1/Test_Anime/episode/302",
+            $cachedList->results[1]["url"]
+        );
+    }
+
+    public function testEpisodesWithoutCachedDetailsHaveNullDetailFields()
+    {
+        DB::table("anime_episodes")->insert(
+            $this->dummyResultsDocument("/v4/anime/1/episodes", "anime", [
+                $this->dummyEpisode()
+            ])
+        );
+
+        $this->getJson('/v4/anime/1/episodes')
+            ->seeStatusCode(200)
+            ->assertJsonPath('data.0.url', null)
+            ->assertJsonPath('data.0.duration', null)
+            ->assertJsonPath('data.0.synopsis', null);
     }
 
     public function testEpisodesTwo()
@@ -279,6 +340,8 @@ class AnimeControllerTest extends TestCase
                 2
             )
         );
+        $this->givenEpisodeDetails(21, "One_Piece");
+
         $this->get('/v4/anime/21/episodes?page=2')
             ->seeStatusCode(200)
             ->seeJsonStructure([
@@ -293,11 +356,13 @@ class AnimeControllerTest extends TestCase
                         'title',
                         'title_japanese',
                         'title_romanji',
+                        'duration',
                         'aired',
                         'score',
                         'filler',
                         'recap',
-                        'forum_url'
+                        'forum_url',
+                        'synopsis'
                     ]
                 ]
             ]);

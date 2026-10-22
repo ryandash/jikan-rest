@@ -74,6 +74,13 @@ class AnimeRefreshCommand extends Command
                         if ($response && !isset($response['error'])) {
                             $successCount++;
                             $this->info("  ✓ Refreshed successfully");
+                            $episodeStatus = $this->call('indexer:anime-episodes', [
+                                'animeId' => $malId,
+                                '--delay' => $delay,
+                            ]);
+                            if ($episodeStatus !== self::SUCCESS) {
+                                $this->warn("  ⚠ Episode details were not fully refreshed");
+                            }
                         } else {
                             $errorMsg = $response['error'] ?? 'Unknown error';
                             $this->warn("  ✗ [FAILED] {$errorMsg}");
@@ -101,6 +108,7 @@ class AnimeRefreshCommand extends Command
             $this->info("\nCalling indexer:anime --skip-existing to fill missing data...");
             $this->call('indexer:anime', [
                 '--skip-existing' => true,
+                '--episodes' => true,
                 '--delay' => $delay,
             ]);
 
