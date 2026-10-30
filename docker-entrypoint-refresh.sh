@@ -64,7 +64,7 @@ log "Waiting for Jikan REST API to be ready..."
 attempt=0
 max_attempts=30
 while [ $attempt -lt $max_attempts ]; do
-    if wget --spider -q "$APP_URL/v4/anime/1" 2>/dev/null; then
+    if curl --fail --silent --show-error "$APP_URL/v4/anime/1" >/dev/null 2>&1; then
         log "Jikan REST API is ready!"
         break
     fi

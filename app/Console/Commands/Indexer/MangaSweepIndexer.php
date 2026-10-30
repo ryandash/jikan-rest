@@ -23,20 +23,21 @@ class MangaSweepIndexer extends Command
         $malIds = array_fill_keys($this->fetchMalIds(), true);
 
         echo "Loading MAL IDs from local DB\n";
-        $results = DB::table('manga')->select('mal_id', '_id')->get();
+        $results = DB::table('manga')->pluck('mal_id')->toArray();
 
         echo "Compare MAL IDs\n";
         $remove = [];
 
-        foreach ($results as $result) {
-            if (!isset($malIds[$result->mal_id])) {
-                $remove[] = $result->_id;
+        foreach ($results as $malId) {
+            if (!isset($malIds[(int) $malId])) {
+                echo "Removing https://myanimelist.net/manga/".$malId."\n";
+                $remove[] = (int) $malId;
             }
         }
 
         echo "Delete removed MAL IDs\n";
         if ($remove !== []) {
-            DB::table('manga')->whereIn('_id', $remove)->delete();
+            DB::table('manga')->whereIn('mal_id', $remove)->delete();
         }
     }
 

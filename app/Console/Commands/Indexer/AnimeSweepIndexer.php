@@ -51,25 +51,27 @@ class AnimeSweepIndexer extends Command
         $this->info("Info: Delete removed MAL IDs\n\n");
 
         echo "Loading MAL IDs\n";
-        $malIds = array_fill_keys($this->fetchMalIds(), null);
+        $malIds = array_fill_keys($this->fetchMalIds(), true);
 
         echo "Loading MAL IDs from local DB\n";
-        $results = DB::table('anime')->select('mal_id', '_id')->get();
+        $results = DB::table('anime')->pluck('mal_id')->toArray();
 
         echo "Compare MAL IDs\n";
         $remove = [];
 
-        foreach ($results as $result) {
-            if (!array_key_exists($result->mal_id, $malIds)) {
-                echo "Removing https://myanimelist.net/anime/".$result->mal_id."\n";
-                $remove[] = $result->_id;
+        foreach ($results as $malId) {
+            if (!isset($malIds[(int) $malId])) {
+                echo "Removing https://myanimelist.net/anime/".$malId."\n";
+                $remove[] = (int) $malId;
             }
         }
 
-        echo "\n\n".count($remove);
+        echo "\n\nRemoved ".count($remove)." anime\n";
 
-        echo "Delete removed MAL IDs\n";
-        DB::table('anime')->whereIn('_id', $remove)->delete();
+        echo "\nDelete removed MAL IDs\n";
+        if ($remove !== []) {
+            DB::table('anime')->whereIn('mal_id', $remove)->delete();
+        }
     }
 
     /**
