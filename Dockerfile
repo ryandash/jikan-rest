@@ -30,6 +30,7 @@ LABEL org.opencontainers.image.source=https://github.com/jikan-me/jikan-rest
 # Keep only tools needed after the image is built; unzip is required by Composer.
 RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends \
+        wget \
         unzip \
         curl \
     && curl -fsSL "https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-$(dpkg --print-architecture)" \
