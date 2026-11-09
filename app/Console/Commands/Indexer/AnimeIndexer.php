@@ -70,7 +70,7 @@ class AnimeIndexer extends Command
         $index = (int)$index;
         $delay = (int)$delay;
 
-        $this->info("Info: AnimeIndexer uses purarue/mal-id-cache fetch available MAL IDs and updates/indexes them\n\n");
+        $this->info("Info: AnimeIndexer fetches MAL IDs from anime-offline-database and updates/indexes them\n\n");
 
         if ($failed && Storage::exists('indexer/indexer_anime.failed')) {
             $this->ids = $this->loadFailedMalIds();
@@ -128,19 +128,29 @@ class AnimeIndexer extends Command
             try {
                 $response = json_decode(file_get_contents($url), true);
 
-                if (isset($response['error']) && $response['status'] != 404) {
+                if (!is_array($response)) {
+                    throw new \RuntimeException('Invalid API response');
+                }
+
+                if (isset($response['error']) && ($response['status'] ?? null) != 404) {
                     echo "[SKIPPED] Failed to fetch {$url} - {$response['error']}\n";
                     $failedIds[] = $id;
-                    Storage::put('indexer/indexer_anime.failed', json_encode($failedIds));
-                } elseif ($indexEpisodes && !isset($response['error'])) {
-                    $episodeStatus = $this->call('indexer:anime-episodes', [
-                        'animeId' => $id,
-                        '--delay' => $delay,
-                    ]);
-                    if ($episodeStatus !== self::SUCCESS) {
-                        echo "[WARNING] Episode indexing failed for anime {$id}\n";
+                } else {
+                    $success[] = $id;
+
+                    if ($indexEpisodes && !isset($response['error'])) {
+                        $episodeStatus = $this->call('indexer:anime-episodes', [
+                            'animeId' => $id,
+                            '--delay' => $delay,
+                        ]);
+
+                        if ($episodeStatus !== self::SUCCESS) {
+                            echo "[WARNING] Episode indexing failed for anime {$id}\n";
+                        }
                     }
                 }
+
+                Storage::put('indexer/indexer_anime.failed', json_encode($failedIds));
 
                 sleep($delay);
             } catch (\Exception $e) {
@@ -161,23 +171,73 @@ class AnimeIndexer extends Command
     }
 
     /**
+     * Fetch all available MAL IDs from anime-offline-database.
+     *
      * @return array
-     * @url https://github.com/purarue/mal-id-cache
      */
-    private function fetchMalIds() : array
+    private function fetchMalIds(): array
     {
-        $this->info("Fetching MAL ID Cache https://raw.githubusercontent.com/purarue/mal-id-cache/master/cache/anime_cache.json...\n");
+        $url = 'https://github.com/cedya77/anime-offline-database/releases/download/latest/anime-offline-database.jsonl';
 
-        $ids = json_decode(
-            file_get_contents('https://raw.githubusercontent.com/purarue/mal-id-cache/master/cache/anime_cache.json'),
-            true
+        $this->info("Fetching Anime Offline Database...\n");
+        $this->info($url);
+
+        $content = file_get_contents($url);
+
+        if ($content === false) {
+            throw new \RuntimeException('Failed to download anime database');
+        }
+
+        $ids = [];
+
+        $this->info("Extracting MAL IDs...\n");
+
+        // Split JSONL into individual lines
+        $lines = preg_split('/\r\n|\r|\n/', $content);
+
+        foreach ($lines as $lineNumber => $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $anime = json_decode($line, true);
+
+            if (!is_array($anime)) {
+                $this->warn('Invalid JSON on line ' . ($lineNumber + 1));
+                continue;
+            }
+
+            foreach (($anime['sources'] ?? []) as $source) {
+                if (!is_string($source)) {
+                    continue;
+                }
+
+                if (preg_match(
+                    '~myanimelist\.net/anime/(\d+)~i',
+                    $source,
+                    $matches
+                )) {
+                    // Associative keys automatically deduplicate IDs
+                    $ids[$matches[1]] = true;
+                }
+            }
+        }
+
+        // Extract unique IDs and sort numerically
+        $ids = array_keys($ids);
+        sort($ids, SORT_NUMERIC);
+        $ids = array_map('intval', $ids);
+
+        // Save cache
+        Storage::put(
+            'indexer/anime_mal_id.json',
+            json_encode($ids)
         );
 
-        $ids = array_merge($ids['sfw'], $ids['nsfw']);
-        sort($ids, SORT_NUMERIC);
-        Storage::put('indexer/anime_mal_id.json', json_encode($ids));
+        $this->info('MAL ID extraction complete!');
+        $this->info('Total unique MAL IDs: ' . count($ids));
 
-        return json_decode(Storage::get('indexer/anime_mal_id.json'));
+        return $ids;
     }
 
     /**
