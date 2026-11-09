@@ -44,43 +44,142 @@ class IncrementalIndexer extends Command
         return [$existingIdsHash, $existingIdsRaw];
     }
 
-    private function getIdsToFetch(string $mediaType): array
+    private function fetchMalIds(): array
     {
-        $idsToFetch = [];
-        [$existingIdsHash, $existingIdsRaw] = $this->getExistingIds($mediaType);
+        $url = 'https://github.com/cedya77/anime-offline-database/releases/download/latest/anime-offline-database.jsonl';
 
-        if ($this->cancelled)
-        {
-            return [];
+        $this->info("Fetching Anime Offline Database...\n");
+        $this->info($url);
+
+        $handle = fopen($url, 'r');
+
+        if ($handle === false) {
+            throw new \RuntimeException('Failed to download anime database');
         }
 
-        $newIdsRaw = file_get_contents("https://raw.githubusercontent.com/purarue/mal-id-cache/master/cache/{$mediaType}_cache.json");
-        $newIdsHash = sha1($newIdsRaw);
+        $ids = [];
+        $lineNumber = 0;
 
-        /** @noinspection PhpConditionAlreadyCheckedInspection */
-        if ($this->cancelled)
-        {
-            return [];
-        }
+        $this->info("Extracting MAL IDs...\n");
 
-        if ($newIdsHash !== $existingIdsHash)
-        {
-            $newIds = json_decode($newIdsRaw, true);
-            $existingIds = json_decode($existingIdsRaw, true);
+        try {
+            while (($line = fgets($handle)) !== false) {
+                $lineNumber++;
 
-            if (is_null($existingIds) || count($existingIds) === 0)
-            {
-                $idsToFetch = $newIds;
-            }
-            else
-            {
-                foreach (["sfw", "nsfw"] as $t)
-                {
-                    $idsToFetch[$t] = array_diff($existingIds[$t], $newIds[$t]);
+                if ($this->cancelled) {
+                    return [];
+                }
+
+                if (trim($line) === '') {
+                    continue;
+                }
+
+                $anime = json_decode($line, true);
+
+                if (!is_array($anime)) {
+                    $this->warn('Invalid JSON on line ' . $lineNumber);
+                    continue;
+                }
+
+                foreach (($anime['sources'] ?? []) as $source) {
+                    if (!is_string($source)) {
+                        continue;
+                    }
+
+                    if (preg_match(
+                        '~myanimelist\.net/anime/(\d+)~i',
+                        $source,
+                        $matches
+                    )) {
+                        $ids[$matches[1]] = true;
+                    }
                 }
             }
+        } finally {
+            fclose($handle);
+        }
 
-            Storage::put("indexer/incremental/$mediaType.json.tmp", $newIdsRaw);
+        $ids = array_keys($ids);
+        sort($ids, SORT_NUMERIC);
+        $ids = array_map('intval', $ids);
+
+        $this->info('MAL ID extraction complete!');
+        $this->info('Total unique MAL IDs: ' . count($ids));
+
+        return $ids;
+    }
+
+    private function getIdsToFetch(string $mediaType): array
+    {
+        [$existingIdsHash, $existingIdsRaw] = $this->getExistingIds($mediaType);
+
+        if ($this->cancelled) {
+            return [];
+        }
+
+        if ($mediaType === 'anime') {
+            // Fetch IDs from the new Anime Offline Database
+            $newIds = $this->fetchMalIds();
+            $newIdsRaw = json_encode($newIds);
+
+            // Support both the old sfw/nsfw cache and the new flat cache
+            $existingIds = json_decode($existingIdsRaw, true) ?? [];
+
+            if (isset($existingIds['sfw']) || isset($existingIds['nsfw'])) {
+                $existingIds = array_merge(
+                    $existingIds['sfw'] ?? [],
+                    $existingIds['nsfw'] ?? []
+                );
+            }
+
+            $idsToFetch = [
+                'sfw' => array_values(array_diff($newIds, $existingIds)),
+                'nsfw' => []
+            ];
+        } else {
+            // Manga still uses the existing MAL ID cache
+            $url = "https://raw.githubusercontent.com/purarue/mal-id-cache/master/cache/{$mediaType}_cache.json";
+
+            $newIdsRaw = file_get_contents($url);
+
+            if ($newIdsRaw === false) {
+                throw new \RuntimeException("Failed to download MAL IDs for {$mediaType}");
+            }
+
+            $newIds = json_decode($newIdsRaw, true);
+
+            if (!is_array($newIds)) {
+                throw new \RuntimeException("Invalid MAL ID response for {$mediaType}");
+            }
+
+            $existingIds = json_decode($existingIdsRaw, true) ?? [];
+
+            $idsToFetch = [];
+
+            foreach (['sfw', 'nsfw'] as $type) {
+                $idsToFetch[$type] = array_values(array_diff(
+                    $newIds[$type] ?? [],
+                    $existingIds[$type] ?? []
+                ));
+            }
+        }
+
+        if ($this->cancelled) {
+            return [];
+        }
+
+        $newIdsHash = sha1($newIdsRaw);
+
+        if ($newIdsHash !== $existingIdsHash) {
+            Storage::put(
+                "indexer/incremental/{$mediaType}.json.tmp",
+                $newIdsRaw
+            );
+        } else {
+            return [
+                'sfw' => [],
+                'nsfw' => []
+            ];
         }
 
         return $idsToFetch;
@@ -96,17 +195,20 @@ class IncrementalIndexer extends Command
         $index = 0;
         $success = [];
         $failedIds = [];
-        $idCount = count($idsToFetch);
-        if ($resume && Storage::exists("indexer/incremental/{$mediaType}_resume.save"))
-        {
-            $index = (int)Storage::get("indexer/incremental/{$mediaType}_resume.save");
+
+        $ids = array_merge(
+            $idsToFetch['sfw'] ?? [],
+            $idsToFetch['nsfw'] ?? []
+        );
+
+        $idCount = count($ids);
+
+        if ($resume && Storage::exists("indexer/incremental/{$mediaType}_resume.save")) {
+            $index = (int) Storage::get("indexer/incremental/{$mediaType}_resume.save");
             $this->info("Resuming from index: $index");
         }
 
-        $ids = array_merge($idsToFetch['sfw'], $idsToFetch['nsfw']);
-
-        if ($index > 0 && !isset($ids[$index]))
-        {
+        if ($index > 0 && !isset($ids[$index])) {
             $index = 0;
             $this->warn('Invalid index; set back to 0');
         }
@@ -122,7 +224,7 @@ class IncrementalIndexer extends Command
                 return;
             }
 
-            $id = $ids[$index];
+            $id = $ids[$i];
 
             $url = env('APP_URL') . "/v4/$mediaType/$id";
             $this->info("Indexing/Updating " . ($i + 1) . "/$idCount $url [MAL ID: $id]");
@@ -145,7 +247,7 @@ class IncrementalIndexer extends Command
             }
 
             $success[] = $id;
-            Storage::put("indexer/incremental/{$mediaType}_resume.save", $index);
+            Storage::put("indexer/incremental/{$mediaType}_resume.save", $i);
         }
 
         Storage::delete("indexer/incremental/{$mediaType}_resume.save");
@@ -214,9 +316,11 @@ class IncrementalIndexer extends Command
                 return 127;
             }
 
-            $idCount = count($idsToFetch);
-            if ($idCount === 0)
-            {
+            $idCount = count($idsToFetch['sfw'] ?? [])
+                + count($idsToFetch['nsfw'] ?? []);
+
+            if ($idCount === 0) {
+                $this->info("No new $mediaType entries to index.");
                 continue;
             }
 
