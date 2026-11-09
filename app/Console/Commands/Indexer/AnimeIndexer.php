@@ -182,45 +182,48 @@ class AnimeIndexer extends Command
         $this->info("Fetching Anime Offline Database...\n");
         $this->info($url);
 
-        $content = file_get_contents($url);
+        $handle = fopen($url, 'r');
 
-        if ($content === false) {
+        if ($handle === false) {
             throw new \RuntimeException('Failed to download anime database');
         }
 
         $ids = [];
+        $lineNumber = 0;
 
         $this->info("Extracting MAL IDs...\n");
 
-        // Split JSONL into individual lines
-        $lines = preg_split('/\r\n|\r|\n/', $content);
+        try {
+            while (($line = fgets($handle)) !== false) {
+                $lineNumber++;
 
-        foreach ($lines as $lineNumber => $line) {
-            if (trim($line) === '') {
-                continue;
-            }
-
-            $anime = json_decode($line, true);
-
-            if (!is_array($anime)) {
-                $this->warn('Invalid JSON on line ' . ($lineNumber + 1));
-                continue;
-            }
-
-            foreach (($anime['sources'] ?? []) as $source) {
-                if (!is_string($source)) {
+                if (trim($line) === '') {
                     continue;
                 }
 
-                if (preg_match(
-                    '~myanimelist\.net/anime/(\d+)~i',
-                    $source,
-                    $matches
-                )) {
-                    // Associative keys automatically deduplicate IDs
-                    $ids[$matches[1]] = true;
+                $anime = json_decode($line, true);
+
+                if (!is_array($anime)) {
+                    $this->warn('Invalid JSON on line ' . $lineNumber);
+                    continue;
+                }
+
+                foreach (($anime['sources'] ?? []) as $source) {
+                    if (!is_string($source)) {
+                        continue;
+                    }
+
+                    if (preg_match(
+                        '~myanimelist\.net/anime/(\d+)~i',
+                        $source,
+                        $matches
+                    )) {
+                        $ids[$matches[1]] = true;
+                    }
                 }
             }
+        } finally {
+            fclose($handle);
         }
 
         // Extract unique IDs and sort numerically
