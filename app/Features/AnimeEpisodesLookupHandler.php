@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Features;
+namespace App\Features;
 
-use App\\Contracts\\CachedScraperService;
-use App\\Dto\\AnimeEpisodesLookupCommand;
-use App\\Support\\CachedData;
-use Illuminate\\Support\\Collection;
-use Jikan\\MyAnimeList\\MalClient;
-use Jikan\\Request\\Anime\\AnimeEpisodesRequest;
+use App\Contracts\CachedScraperService;
+use App\Dto\AnimeEpisodesLookupCommand;
+use App\Support\CachedData;
+use Illuminate\Support\Collection;
+use Jikan\MyAnimeList\MalClient;
+use Jikan\Request\Anime\AnimeEpisodesRequest;
 
 final class AnimeEpisodesLookupHandler extends RequestHandlerWithScraperCache
 {
