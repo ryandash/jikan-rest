@@ -311,16 +311,11 @@ class AppServiceProvider extends ServiceProvider
                 foreach ($requestHandlersWithScraperService as $handlerClass => $repositoryInstance) {
                     $jikan = $app->get("JikanParser");
                     $serializer = $app->get("SerializerV4");
-                    $scraperService = $app->make(DefaultCachedScraperService::class, [
-                        "repository" => $repositoryInstance,
-                        "jikan" => $jikan,
-                        "serializer" => $serializer
-                    ]);
-
-                    $handlerDependencies = [
+                    $scraperService = $app->make(DefaultCachedScraperService::class,
+                        ["repository" => $repositoryInstance, "jikan" => $jikan, "serializer" => $serializer]);
+                    $requestHandlers[] = $app->make($handlerClass, [
                         "scraperService" => $scraperService
-                    ];
-
+                    ]);
                 }
 
                 // automatically resolvable dependencies or no dependencies at all
