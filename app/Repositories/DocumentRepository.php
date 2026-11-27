@@ -27,6 +27,11 @@ final class DocumentRepository extends DatabaseRepository
         return $this->tableName;
     }
 
+    public function whereIn(string $key, array $values): \Illuminate\Contracts\Database\Query\Builder
+    {
+        return $this->queryable(true)->whereIn($key, $values);
+    }
+
     public function insert(array $attributes): bool
     {
         // override the parent method, because these records are not search indexed
