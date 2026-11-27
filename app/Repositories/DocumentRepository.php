@@ -14,13 +14,13 @@ final class DocumentRepository extends DatabaseRepository
 
     public function __construct(string $tableName)
     {
-        parent::__construct(fn() => DB::table($tableName), fn($x, $y) => throw new \\Exception("Not supported"));
+        parent::__construct(fn() => DB::table($tableName), fn($x, $y) => throw new \Exception("Not supported"));
         $this->tableName = $tableName;
     }
 
     public function scrape(int|string $id): array
     {
-        throw new \\Exception("Not supported");
+        throw new \Exception("Not supported");
     }
 
     public function tableName(): string
@@ -47,6 +47,6 @@ final class DocumentRepository extends DatabaseRepository
 
     public function createEntity()
     {
-        throw new \\Exception("Not supported");
+        throw new \Exception("Not supported");
     }
 }
