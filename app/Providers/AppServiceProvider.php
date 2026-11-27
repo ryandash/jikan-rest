@@ -321,18 +321,6 @@ class AppServiceProvider extends ServiceProvider
                         "scraperService" => $scraperService
                     ];
 
-                    if ($handlerClass === Features\AnimeEpisodesLookupHandler::class) {
-                        $handlerDependencies["episodeScraperService"] = $app->make(
-                            DefaultCachedScraperService::class,
-                            [
-                                "repository" => $unitOfWorkInstance->documents("anime_episode"),
-                                "jikan" => $jikan,
-                                "serializer" => $serializer
-                            ]
-                        );
-                    }
-
-                    $requestHandlers[] = $app->make($handlerClass, $handlerDependencies);
                 }
 
                 // automatically resolvable dependencies or no dependencies at all
