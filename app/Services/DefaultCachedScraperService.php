@@ -53,34 +53,6 @@ final class DefaultCachedScraperService implements CachedScraperService
     }
 
     /**
-     * Forces a scraper refresh for a cached list/document, even when the existing cache is not expired.
-     *
-     * This is used when a cached episode detail document is structurally incomplete.
-     *
-     * @param string $cacheKey
-     * @param Closure $getMalDataCallback
-     * @param int|null $page
-     * @return CachedData
-     */
-    public function refreshList(string $cacheKey, Closure $getMalDataCallback, ?int $page = null): CachedData
-    {
-        $results = $this->get($cacheKey);
-        $page = $page ?? 1;
-
-        $data = $getMalDataCallback($this->jikan, $page);
-        $scraperResponse = $this->serializeScraperResult(Collection::unwrap($data));
-        $response = $this->prepareScraperResponse($cacheKey, $results->isEmpty(), $scraperResponse);
-
-        if ($results->isEmpty()) {
-            $this->repository->insert($response);
-        } else {
-            $this->getQueryableByCacheKey($cacheKey)->update($response);
-        }
-
-        return $this->get($cacheKey);
-    }
-
-    /**
      * Finds cached scraper results by id in the database, if not found scrapes them from MAL.
      * @param int $id
      * @param string $cacheKey
