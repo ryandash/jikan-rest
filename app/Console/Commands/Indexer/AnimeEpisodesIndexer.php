@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Console\\Commands\\Indexer;
+namespace App\Console\Commands\Indexer;
 
-use App\\Contracts\\UnitOfWork;
-use Illuminate\\Console\\Command;
-use Illuminate\\Http\\Client\\ConnectionException;
-use Illuminate\\Support\\Collection;
-use Illuminate\\Support\\Facades\\Http;
+use App\Contracts\UnitOfWork;
+use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 
 final class AnimeEpisodesIndexer extends Command
 {
@@ -198,7 +198,7 @@ final class AnimeEpisodesIndexer extends Command
         return is_array($document) ? $document : [];
     }
 
-    private function request(string $url): \\Illuminate\\Http\\Client\\Response
+    private function request(string $url): \Illuminate\Http\Client\Response
     {
         return Http::withHeader('auth', (string) env('APP_KEY'))
             ->timeout(120)
