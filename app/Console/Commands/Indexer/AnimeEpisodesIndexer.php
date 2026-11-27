@@ -118,7 +118,7 @@ final class AnimeEpisodesIndexer extends Command
 
             foreach ($episodesNeedingDetails as $episode) {
                 // Remove a partial cache document so the normal detail endpoint fetches fresh MAL data.
-                $episodeDocuments->where('request_hash', $episode['request_hash'])->delete();
+                $episodeDocuments->whereIn('request_hash', [$episode['request_hash']])->delete();
 
                 $episodeUrl = $this->episodeUrl($animeId, $episode['mal_id']);
 
