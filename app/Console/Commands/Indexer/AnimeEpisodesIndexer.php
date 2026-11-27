@@ -117,10 +117,6 @@ final class AnimeEpisodesIndexer extends Command
             ));
 
             foreach ($episodesNeedingDetails as $episode) {
-                if ($delay > 0) {
-                    sleep($delay);
-                }
-
                 // Remove a partial cache document so the normal detail endpoint fetches fresh MAL data.
                 $episodeDocuments->where('request_hash', $episode['request_hash'])->delete();
 
@@ -132,6 +128,11 @@ final class AnimeEpisodesIndexer extends Command
                     $this->warn("Episode {$episode['mal_id']} request failed: {$exception->getMessage()}");
                     $failedEpisodes++;
                     continue;
+                } finally {
+                    // Apply the delay after the detail request has completed.
+                    if ($delay > 0) {
+                        sleep($delay);
+                    }
                 }
 
                 if (!$detailResponse->successful()) {
