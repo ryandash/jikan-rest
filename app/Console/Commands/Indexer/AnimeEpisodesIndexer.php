@@ -178,7 +178,7 @@ final class AnimeEpisodesIndexer extends Command
     private function hasCompleteEpisodeDetails(array $episode): bool
     {
         foreach (self::EPISODE_DETAIL_FIELDS as $field) {
-            if (!array_key_exists($field, $episode)) {
+            if (!array_key_exists($field, $episode) || $episode[$field] === null) {
                 return false;
             }
         }
